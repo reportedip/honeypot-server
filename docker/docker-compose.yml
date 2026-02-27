@@ -1,0 +1,11 @@
+services:
+  honeypot:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "9090:80"
+    volumes:
+      - ../data:/var/www/honeypot/data
+    environment:
+      - HONEYPOT_PROFILE=wordpress

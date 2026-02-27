@@ -1,0 +1,21 @@
+# Line endings
+* text=auto eol=lf
+*.php text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.xml text eol=lf
+
+# Export-ignore (not included in release archives)
+/.claude export-ignore
+/.editorconfig export-ignore
+/.gitattributes export-ignore
+/.github export-ignore
+/tests export-ignore
+/CLAUDE.md export-ignore
+/docker/docker-compose.yml export-ignore
+/docs export-ignore
+*.png export-ignore
+/CONTRIBUTING.md export-ignore
+/SECURITY.md export-ignore
+/CHANGELOG.md export-ignore

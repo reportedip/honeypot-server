@@ -1,0 +1,44 @@
+# Runtime data
+/data/
+
+# Local config (contains secrets)
+/config/config.php
+
+# Dependencies
+/vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Claude Code
+.claude/
+CLAUDE.md
+
+# Playwright MCP dev artifacts
+.playwright-mcp/
+
+# Environment files
+.env
+.env.*
+
+# Logs & temp
+*.log
+*.cache
+/tmp/
+
+# PHP
+/php-cs-fixer.cache
+.phpunit.result.cache
+
+# Docker runtime
+docker/logs/
+docker/data/

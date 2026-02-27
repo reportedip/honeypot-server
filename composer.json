@@ -1,0 +1,50 @@
+{
+    "name": "reportedip/honeypot-server",
+    "description": "A standalone PHP honeypot server that emulates CMS installations to detect and report malicious traffic to reportedip.de",
+    "type": "project",
+    "license": "BSL-1.1",
+    "keywords": ["honeypot", "security", "threat-detection", "reportedip", "cms", "wordpress", "drupal", "joomla", "intrusion-detection", "php"],
+    "homepage": "https://github.com/reportedip/honeypot-server",
+    "authors": [
+        {
+            "name": "Patrick Schlesinger",
+            "email": "1@reportedip.de",
+            "homepage": "https://reportedip.de"
+        }
+    ],
+    "require": {
+        "php": ">=8.2",
+        "ext-pdo": "*",
+        "ext-pdo_sqlite": "*",
+        "ext-json": "*",
+        "ext-curl": "*"
+    },
+    "suggest": {
+        "ext-zip": "Required for the self-update system"
+    },
+    "autoload": {
+        "psr-4": {
+            "ReportedIp\\Honeypot\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ReportedIp\\Honeypot\\Tests\\": "tests/"
+        }
+    },
+    "support": {
+        "issues": "https://github.com/reportedip/honeypot-server/issues",
+        "source": "https://github.com/reportedip/honeypot-server"
+    },
+    "scripts": {
+        "test": "php tests/run-tests.php",
+        "install-honeypot": "php install.php",
+        "process-queue": "php cli.php process-queue",
+        "stats": "php cli.php stats",
+        "cleanup": "php cli.php cleanup"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable"
+}

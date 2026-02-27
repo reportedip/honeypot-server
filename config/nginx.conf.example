@@ -1,0 +1,22 @@
+server {
+    listen 80;
+    server_name your-honeypot.example.com;
+    root /path/to/reportedip-honeypot-server/public;
+    index index.php;
+
+    # ALL requests go through index.php
+    location / {
+        try_files /index.php =404;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/run/php/php-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $document_root/index.php;
+        include fastcgi_params;
+    }
+
+    # Block access to sensitive dirs
+    location ~ ^/(src|config|data|tests|docker)/ {
+        deny all;
+    }
+}
