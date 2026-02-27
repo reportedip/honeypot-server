@@ -154,7 +154,7 @@ class DrupalProfile extends CmsProfile
     {
         return [
             'site_name'    => 'My Drupal Site',
-            'site_url'     => '',
+            'site_url'     => $this->getSiteUrl(),
             'drupal_version' => $this->getVersion(),
             'theme'        => 'olivero',
             'language'     => 'en',

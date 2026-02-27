@@ -42,9 +42,11 @@ class WordPressProfile extends CmsProfile
      */
     public function getDefaultHeaders(): array
     {
+        $base = $this->getSiteUrl();
+
         return [
-            'X-Pingback'              => '/xmlrpc.php',
-            'Link'                     => '</wp-json/>; rel="https://api.w.org/"',
+            'X-Pingback'              => $base . '/xmlrpc.php',
+            'Link'                     => '<' . $base . '/wp-json/>; rel="https://api.w.org/"',
             'X-Content-Type-Options'   => 'nosniff',
             'Server'                   => 'Apache/2.4.58 (Ubuntu)',
         ];
@@ -172,7 +174,7 @@ class WordPressProfile extends CmsProfile
     {
         return [
             'site_name'   => 'My WordPress Site',
-            'site_url'    => '',
+            'site_url'    => $this->getSiteUrl(),
             'wp_version'  => $this->getVersion(),
             'theme'       => 'twentytwentyfour',
             'tagline'     => 'Just another WordPress site',

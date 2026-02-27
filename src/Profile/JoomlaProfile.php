@@ -143,7 +143,7 @@ class JoomlaProfile extends CmsProfile
     {
         return [
             'site_name'      => 'My Joomla Site',
-            'site_url'       => '',
+            'site_url'       => $this->getSiteUrl(),
             'joomla_version' => $this->getVersion(),
             'template'       => 'cassiopeia',
             'language'       => 'en-GB',

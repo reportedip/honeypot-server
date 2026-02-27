@@ -57,6 +57,9 @@ final class App
         $ipResolver = new IpResolver($this->config);
         $request->setIp($ipResolver->resolve($request));
 
+        // Set the site URL on the profile for absolute URLs in responses
+        $this->profile->setSiteUrl($request->getBaseUrl());
+
         // Route the request
         $router = new Router($this->profile, $this->config);
 

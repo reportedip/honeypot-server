@@ -188,6 +188,22 @@ final class Request
     }
 
     /**
+     * Get the base URL (scheme + host) derived from the current request.
+     */
+    public function getBaseUrl(): string
+    {
+        $scheme = 'http';
+        if ((!empty($this->server['HTTPS']) && $this->server['HTTPS'] !== 'off')
+            || $this->getHeader('X-Forwarded-Proto') === 'https') {
+            $scheme = 'https';
+        }
+
+        $host = $this->getHeader('Host') ?? 'localhost';
+
+        return $scheme . '://' . $host;
+    }
+
+    /**
      * Get a value from the server parameters.
      */
     public function getServerParam(string $key): ?string

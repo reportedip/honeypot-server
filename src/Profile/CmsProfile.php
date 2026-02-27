@@ -12,6 +12,24 @@ namespace ReportedIp\Honeypot\Profile;
  */
 abstract class CmsProfile
 {
+    protected string $siteUrl = '';
+
+    /**
+     * Set the site URL derived from the current request.
+     */
+    public function setSiteUrl(string $url): void
+    {
+        $this->siteUrl = rtrim($url, '/');
+    }
+
+    /**
+     * Get the site URL.
+     */
+    public function getSiteUrl(): string
+    {
+        return $this->siteUrl;
+    }
+
     /**
      * Get the CMS identifier name (lowercase).
      */
