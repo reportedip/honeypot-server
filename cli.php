@@ -57,7 +57,7 @@ use ReportedIp\Honeypot\Update\UpdateManager;
 // Load configuration
 $configPath = $baseDir . '/config/config.php';
 if (!file_exists($configPath)) {
-    fwrite(STDERR, "Error: Configuration not found. Run: php install.php\n");
+    fwrite(STDERR, "Error: Configuration not found. Open the website in your browser to run the web installer.\n");
     exit(1);
 }
 

@@ -42,7 +42,6 @@ final class UpdateManager
         'templates',
         'public/index.php',
         'cli.php',
-        'install.php',
         'VERSION',
         'composer.json',
         'tests',

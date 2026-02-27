@@ -6,7 +6,7 @@ declare(strict_types=1);
  * reportedip-honeypot-server Configuration
  *
  * Copy this file to config.php and adjust values.
- * Run `php install.php` for guided setup.
+ * Open the website in your browser to run the web installer.
  */
 
 return [
@@ -22,7 +22,7 @@ return [
     // Admin panel path (for honeypot management)
     'admin_path' => '/_hp_admin',
 
-    // Bcrypt hash of the admin password (set by install.php)
+    // Bcrypt hash of the admin password (set by web installer)
     'admin_password_hash' => '',
 
     // SQLite database path

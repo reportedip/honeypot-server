@@ -45,31 +45,31 @@ Zero external Composer dependencies. Runs on vanilla PHP 8.2+. Uses SQLite for p
 ```bash
 git clone https://github.com/reportedip/honeypot-server.git
 cd honeypot-server
-php install.php
 docker compose -f docker/docker-compose.yml up -d
 ```
+
+Open the container URL in your browser — the web installer starts automatically on first visit.
 
 ### Manual Installation
 
 ```bash
 git clone https://github.com/reportedip/honeypot-server.git
 cd honeypot-server
-php install.php
 ```
 
-The install wizard guides you through:
-
-1. PHP version and extension checks
-2. Community Access Key — contact **[1@reportedip.de](mailto:1@reportedip.de)** to get yours (free)
-3. CMS profile selection (WordPress / Drupal / Joomla)
-4. Admin panel path and password
-5. Optional OpenAI API key for AI content generation
-6. Database initialization and IP whitelisting
-
-Then configure your web server:
+Configure your web server:
 
 - **nginx** — Copy `config/nginx.conf.example` and adjust paths
 - **Apache** — Copy `config/apache.htaccess.example` to your document root
+
+Then open the website URL in your browser. The web installer starts automatically when no `config/config.php` exists and guides you through:
+
+1. System requirements check (PHP 8.2+, required extensions)
+2. Community Access Key — contact **[1@reportedip.de](mailto:1@reportedip.de)** to get yours (free)
+3. CMS profile selection (WordPress / Drupal / Joomla)
+4. Admin panel path and password
+5. Optional AI content settings (OpenAI API key, model, language)
+6. Automatic initialization (database, directories, IP whitelist)
 
 ### Queue Processing
 
@@ -220,7 +220,6 @@ php cli.php test-api                     # Test API connectivity
 ```
 reportedip-honeypot-server/
 ├── public/index.php              # Single entry point (document root)
-├── install.php                   # Interactive install wizard
 ├── cli.php                       # CLI tool for cron and management
 ├── config/
 │   ├── config.example.php        # Configuration template

@@ -125,7 +125,7 @@ final class AdminController
         if (!$this->auth->isConfigured()) {
             $response->setContentType('text/html; charset=utf-8');
             $response->setBody('<html><body><h1>Admin Not Configured</h1>'
-                . '<p>Run <code>php install.php</code> to set an admin password.</p></body></html>');
+                . '<p>Open the website in your browser to run the web installer and set an admin password.</p></body></html>');
             $response->send();
             return;
         }

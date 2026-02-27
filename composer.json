@@ -38,7 +38,6 @@
     },
     "scripts": {
         "test": "php tests/run-tests.php",
-        "install-honeypot": "php install.php",
         "process-queue": "php cli.php process-queue",
         "stats": "php cli.php stats",
         "cleanup": "php cli.php cleanup"
