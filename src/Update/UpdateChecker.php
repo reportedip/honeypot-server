@@ -179,15 +179,20 @@ final class UpdateChecker
 
     /**
      * If auto_update is enabled and an update is available, trigger it.
+     *
+     * Checks both the status file toggle (admin panel) and the config file setting.
+     * The status file toggle takes precedence as it reflects the user's latest choice.
      */
     public function maybeAutoUpdate(): void
     {
-        $autoUpdate = (bool) $this->config->get('auto_update', true);
+        $status = $this->loadStatus();
+
+        // Status file toggle (set via admin panel) takes precedence over config
+        $autoUpdate = $status['auto_update_enabled'] ?? (bool) $this->config->get('auto_update', true);
         if (!$autoUpdate) {
             return;
         }
 
-        $status = $this->loadStatus();
         if (!($status['update_available'] ?? false)) {
             return;
         }
@@ -316,7 +321,11 @@ final class UpdateChecker
         $status['latest_release_notes'] = $result['release_notes'];
         $status['latest_published_at'] = $result['published_at'];
         $status['update_available'] = $result['available'];
-        $status['auto_update_enabled'] = (bool) $this->config->get('auto_update', true);
+
+        // Preserve admin panel toggle; only set default if not yet defined
+        if (!isset($status['auto_update_enabled'])) {
+            $status['auto_update_enabled'] = (bool) $this->config->get('auto_update', true);
+        }
 
         $this->saveStatus($status);
     }
