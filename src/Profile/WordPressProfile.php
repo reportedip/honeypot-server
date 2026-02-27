@@ -61,6 +61,7 @@ class WordPressProfile extends CmsProfile
     public function getVulnerabilityPaths(): array
     {
         return [
+            '/wp-content/',
             '/wp-content/plugins/revslider/',
             '/wp-config.php.bak',
             '/readme.html',
@@ -131,6 +132,11 @@ class WordPressProfile extends CmsProfile
 
         // Author enumeration (check query params for ?author=)
         if (isset($queryParams['author']) || preg_match('#^/author/.+#', $path)) {
+            return 'vuln';
+        }
+
+        // WordPress core directories (also without trailing slash)
+        if ($path === '/wp-content' || $path === '/wp-includes') {
             return 'vuln';
         }
 

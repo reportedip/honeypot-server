@@ -111,10 +111,18 @@ class FakeVulnTrap implements TrapInterface
         }
 
         // /wp-includes/ - Fake forbidden
-        if (str_starts_with($path, '/wp-includes/')) {
+        if ($path === '/wp-includes' || str_starts_with($path, '/wp-includes/')) {
             $response->setStatusCode(403);
             $response->setContentType('text/html; charset=UTF-8');
             $response->setBody($this->getForbiddenPage());
+            return $response;
+        }
+
+        // /wp-content/ and subdirectories - WordPress default blank index.php ("Silence is golden.")
+        if ($path === '/wp-content' || $path === '/wp-content/' || str_starts_with($path, '/wp-content/')) {
+            $response->setStatusCode(200);
+            $response->setContentType('text/html; charset=UTF-8');
+            $response->setBody('');
             return $response;
         }
 
