@@ -3,7 +3,7 @@
  * WordPress single post template for AI-generated content.
  *
  * Variables: $site_name, $site_url, $wp_version, $tagline, $theme,
- *            $language, $post, $recent_posts, $request_uri
+ *            $language, $content_language, $post, $recent_posts, $request_uri
  */
 
 $siteUrl = htmlspecialchars($site_url ?? '', ENT_QUOTES, 'UTF-8');
@@ -16,6 +16,7 @@ $postTitle = htmlspecialchars($post['title'] ?? '', ENT_QUOTES, 'UTF-8');
 $postAuthor = htmlspecialchars($post['author'] ?? 'admin', ENT_QUOTES, 'UTF-8');
 $postCategory = htmlspecialchars($post['category'] ?? 'Uncategorized', ENT_QUOTES, 'UTF-8');
 $postDate = date('F j, Y', strtotime($post['published_date'] ?? 'now'));
+$postDateIso = date('c', strtotime($post['published_date'] ?? 'now'));
 $postContent = $post['content'] ?? '';
 $metaDesc = htmlspecialchars($post['meta_description'] ?? $post['excerpt'] ?? '', ENT_QUOTES, 'UTF-8');
 $canonicalUrl = htmlspecialchars($post['url'] ?? '', ENT_QUOTES, 'UTF-8');
@@ -30,10 +31,63 @@ $canonicalUrl = htmlspecialchars($post['url'] ?? '', ENT_QUOTES, 'UTF-8');
 <meta property="og:title" content="<?= $postTitle ?>">
 <meta property="og:description" content="<?= $metaDesc ?>">
 <meta property="og:type" content="article">
+<meta property="og:url" content="<?= $canonicalUrl ?>">
+<meta property="og:site_name" content="<?= $siteName ?>">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="<?= $canonicalUrl ?>">
 <title><?= $postTitle ?> &#8211; <?= $siteName ?></title>
 <link rel="alternate" type="application/rss+xml" title="<?= $siteName ?> &raquo; Feed" href="<?= $siteUrl ?>/feed/">
 <link rel="pingback" href="<?= $siteUrl ?>/xmlrpc.php">
+<link rel='stylesheet' id='wp-block-library-css' href='<?= $siteUrl ?>/wp-includes/css/dist/block-library/style.min.css?ver=<?= $version ?>' media='all' />
+<link rel='stylesheet' id='twentytwentyfour-style-css' href='<?= $siteUrl ?>/wp-content/themes/twentytwentyfour/style.css?ver=1.0' media='all' />
+<link rel='stylesheet' id='avada-stylesheet-css' href='<?= $siteUrl ?>/wp-content/themes/Avada/assets/css/style.min.css?ver=7.11.4' media='all' />
+<link rel='stylesheet' id='contact-form-7-css' href='<?= $siteUrl ?>/wp-content/plugins/contact-form-7/includes/css/styles.css?ver=5.8.4' media='all' />
+<link rel='stylesheet' id='elementor-frontend-css' href='<?= $siteUrl ?>/wp-content/plugins/elementor/assets/css/frontend.min.css?ver=3.18.3' media='all' />
+<script type="application/ld+json" class="yoast-schema-graph">
+<?= json_encode([
+    '@context' => 'https://schema.org',
+    '@graph' => [
+        [
+            '@type' => 'WebPage',
+            '@id' => ($post['url'] ?? '') . '#webpage',
+            'url' => $post['url'] ?? '',
+            'name' => $post['title'] ?? '',
+            'isPartOf' => ['@id' => ($site_url ?? '') . '/#website'],
+            'datePublished' => $postDateIso,
+            'dateModified' => $postDateIso,
+            'description' => $post['meta_description'] ?? $post['excerpt'] ?? '',
+            'inLanguage' => $language ?? 'en-US',
+        ],
+        [
+            '@type' => 'WebSite',
+            '@id' => ($site_url ?? '') . '/#website',
+            'url' => $site_url ?? '',
+            'name' => $site_name ?? '',
+            'description' => $tagline ?? '',
+            'publisher' => ['@id' => ($site_url ?? '') . '/#organization'],
+            'inLanguage' => $language ?? 'en-US',
+        ],
+        [
+            '@type' => 'Article',
+            '@id' => ($post['url'] ?? '') . '#article',
+            'isPartOf' => ['@id' => ($post['url'] ?? '') . '#webpage'],
+            'author' => ['@type' => 'Person', 'name' => $post['author'] ?? 'admin'],
+            'headline' => $post['title'] ?? '',
+            'datePublished' => $postDateIso,
+            'dateModified' => $postDateIso,
+            'mainEntityOfPage' => ['@id' => ($post['url'] ?? '') . '#webpage'],
+            'wordCount' => str_word_count(strip_tags($post['content'] ?? '')),
+            'publisher' => ['@id' => ($site_url ?? '') . '/#organization'],
+            'articleSection' => [$post['category'] ?? 'Uncategorized'],
+            'inLanguage' => $language ?? 'en-US',
+        ],
+    ],
+], JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) ?>
+</script>
+<script>
+window._wpemojiSettings = {"baseUrl":"https:\/\/s.w.org\/images\/core\/emoji\/15.0.3\/72x72\/","ext":".png","svgUrl":"https:\/\/s.w.org\/images\/core\/emoji\/15.0.3\/svg\/","svgExt":".svg","source":{"concatemoji":"<?= $siteUrl ?>\/wp-includes\/js\/wp-emoji-release.min.js?ver=<?= $version ?>"}};
+!function(o,n,e){var s=o.document,a=s.createElement("script");a.src=n,s.head.appendChild(a)}(window,"<?= $siteUrl ?>/wp-includes/js/wp-emoji-release.min.js?ver=<?= $version ?>");
+</script>
 <style type="text/css">
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif;font-size:16px;line-height:1.7;color:#333;background:#f0f0f0}
@@ -83,6 +137,7 @@ a{color:#0073aa;text-decoration:none}a:hover{color:#005177;text-decoration:under
 <nav class="site-nav">
 <ul>
 <li><a href="<?= $siteUrl ?>/">Home</a></li>
+<li><a href="<?= $siteUrl ?>/services/">Services</a></li>
 <li><a href="<?= $siteUrl ?>/about/">About</a></li>
 <li><a href="<?= $siteUrl ?>/blog/">Blog</a></li>
 <li><a href="<?= $siteUrl ?>/contact/">Contact</a></li>
@@ -138,7 +193,7 @@ Posted on <?= $postDate ?> by <a href="<?= $siteUrl ?>/author/<?= urlencode(strt
     <li><a href="<?= htmlspecialchars($rp['url'] ?? '', ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($rp['title'] ?? '', ENT_QUOTES, 'UTF-8') ?></a></li>
     <?php endforeach; ?>
 <?php else: ?>
-    <li><a href="<?= $siteUrl ?>/hello-world/">Hello world!</a></li>
+    <li><a href="<?= $siteUrl ?>/">Home</a></li>
 <?php endif; ?>
 </ul>
 </div>
@@ -166,5 +221,9 @@ Posted on <?= $postDate ?> by <a href="<?= $siteUrl ?>/author/<?= urlencode(strt
 <p>&copy; <?= $year ?> <?= $siteName ?>. All rights reserved.</p>
 </footer>
 
+<script src='<?= $siteUrl ?>/wp-includes/js/jquery/jquery.min.js?ver=3.7.1' id='jquery-core-js'></script>
+<script src='<?= $siteUrl ?>/wp-includes/js/jquery/jquery-migrate.min.js?ver=3.4.1' id='jquery-migrate-js'></script>
+<script src='<?= $siteUrl ?>/wp-content/plugins/contact-form-7/includes/js/index.js?ver=5.8.4' id='contact-form-7-js'></script>
+<script src='<?= $siteUrl ?>/wp-includes/js/wp-embed.min.js?ver=<?= $version ?>' id='wp-embed-js'></script>
 </body>
 </html>

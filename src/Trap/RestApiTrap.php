@@ -99,26 +99,45 @@ class RestApiTrap implements TrapInterface
 
         // /wp-json/wp/v2/posts - Fake posts
         if (str_starts_with($path, '/wp-json/wp/v2/posts')) {
-            $now = gmdate('Y-m-d\TH:i:s');
-            $response->json([
-                [
-                    'id'       => 1,
-                    'date'     => $now,
-                    'date_gmt' => $now,
-                    'guid'     => ['rendered' => $siteUrl . '/?p=1'],
-                    'modified' => $now,
-                    'slug'     => 'hello-world',
+            $lang = $data['content_language'] ?? 'en';
+            $isGerman = ($lang === 'de');
+            $posts = $isGerman ? [
+                ['id' => 5, 'slug' => 'responsives-webdesign-2024', 'date' => '2024-09-12T10:30:00', 'title' => 'Warum responsives Webdesign 2024 wichtiger denn je ist', 'excerpt' => 'Mobile Endger&auml;te machen mittlerweile &uuml;ber 60% des weltweiten Web-Traffics aus.', 'author' => 1, 'cat' => 1, 'month' => '09'],
+                ['id' => 4, 'slug' => 'wordpress-sicherheitstipps', 'date' => '2024-08-23T14:15:00', 'title' => '5 h&auml;ufige Sicherheitsl&uuml;cken in WordPress und wie Sie sich sch&uuml;tzen', 'excerpt' => 'WordPress betreibt &uuml;ber 40% aller Websites weltweit.', 'author' => 1, 'cat' => 2, 'month' => '08'],
+                ['id' => 3, 'slug' => 'partnerschaft-cloudsecure', 'date' => '2024-07-05T09:00:00', 'title' => 'Neue Partnerschaft mit CloudSecure f&uuml;r erweiterten DDoS-Schutz', 'excerpt' => 'Wir freuen uns, unsere neue Partnerschaft mit CloudSecure bekannt zu geben.', 'author' => 2, 'cat' => 3, 'month' => '07'],
+                ['id' => 2, 'slug' => 'seo-grundlagen-meta-tags', 'date' => '2024-06-18T11:45:00', 'title' => 'SEO-Grundlagen: Meta-Tags und strukturierte Daten richtig einsetzen', 'excerpt' => 'Suchmaschinenoptimierung beginnt bei den Grundlagen.', 'author' => 1, 'cat' => 4, 'month' => '06'],
+                ['id' => 1, 'slug' => 'sommeraktion-website-analyse', 'date' => '2024-05-02T08:30:00', 'title' => 'Sommeraktion: Kostenlose Website-Analyse f&uuml;r Neukunden', 'excerpt' => 'Nutzen Sie unsere kostenlose Website-Analyse.', 'author' => 2, 'cat' => 5, 'month' => '05'],
+            ] : [
+                ['id' => 5, 'slug' => 'responsive-web-design-2024', 'date' => '2024-09-12T10:30:00', 'title' => 'Why Responsive Web Design Matters More Than Ever in 2024', 'excerpt' => 'Mobile devices now account for over 60% of global web traffic.', 'author' => 1, 'cat' => 1, 'month' => '09'],
+                ['id' => 4, 'slug' => 'wordpress-security-tips', 'date' => '2024-08-23T14:15:00', 'title' => '5 Common WordPress Security Vulnerabilities and How to Protect Your Site', 'excerpt' => 'WordPress powers over 40% of all websites worldwide.', 'author' => 1, 'cat' => 2, 'month' => '08'],
+                ['id' => 3, 'slug' => 'partnership-cloudsecure', 'date' => '2024-07-05T09:00:00', 'title' => 'New Partnership with CloudSecure for Enhanced DDoS Protection', 'excerpt' => 'We are excited to announce our new partnership with CloudSecure.', 'author' => 2, 'cat' => 3, 'month' => '07'],
+                ['id' => 2, 'slug' => 'seo-basics-meta-tags', 'date' => '2024-06-18T11:45:00', 'title' => 'SEO Basics: How to Properly Implement Meta Tags and Structured Data', 'excerpt' => 'Search engine optimization starts with the fundamentals.', 'author' => 1, 'cat' => 4, 'month' => '06'],
+                ['id' => 1, 'slug' => 'summer-special-website-audit', 'date' => '2024-05-02T08:30:00', 'title' => 'Summer Special: Free Website Audit for New Clients', 'excerpt' => 'Take advantage of our free website audit.', 'author' => 2, 'cat' => 5, 'month' => '05'],
+            ];
+
+            $jsonPosts = [];
+            foreach ($posts as $p) {
+                $year = substr($p['date'], 0, 4);
+                $link = $siteUrl . "/{$year}/{$p['month']}/{$p['slug']}/";
+                $jsonPosts[] = [
+                    'id'       => $p['id'],
+                    'date'     => $p['date'],
+                    'date_gmt' => $p['date'],
+                    'guid'     => ['rendered' => $siteUrl . '/?p=' . $p['id']],
+                    'modified' => $p['date'],
+                    'slug'     => $p['slug'],
                     'status'   => 'publish',
                     'type'     => 'post',
-                    'link'     => $siteUrl . '/hello-world/',
-                    'title'    => ['rendered' => 'Hello world!'],
-                    'content'  => ['rendered' => '<p>Welcome to our site. This is your first post. Edit or delete it, then start writing!</p>', 'protected' => false],
-                    'excerpt'  => ['rendered' => '<p>Welcome to our site. This is your first post.</p>', 'protected' => false],
-                    'author'   => 1,
-                    'categories' => [1],
+                    'link'     => $link,
+                    'title'    => ['rendered' => $p['title']],
+                    'content'  => ['rendered' => '<p>' . $p['excerpt'] . '</p>', 'protected' => false],
+                    'excerpt'  => ['rendered' => '<p>' . $p['excerpt'] . '</p>', 'protected' => false],
+                    'author'   => $p['author'],
+                    'categories' => [$p['cat']],
                     'tags'     => [],
-                ],
-            ]);
+                ];
+            }
+            $response->json($jsonPosts);
             return $response;
         }
 

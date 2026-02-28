@@ -100,6 +100,11 @@ return [
     // Default language for generated content ('en' or 'de')
     'content_language' => 'en',
 
+    // Site identity (used in templates, feed, REST API)
+    // Leave empty to use CMS-specific defaults
+    'site_name' => '',
+    'site_tagline' => '',
+
     // Default topic niche for content generation
     'content_niche' => '',
 

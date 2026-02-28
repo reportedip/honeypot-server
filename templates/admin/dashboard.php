@@ -7,11 +7,13 @@
  *            $categoryRegistry (class name for static calls)
  */
 
-$page_title = 'Dashboard';
 $active_tab = $active_tab ?? 'dashboard';
+$page_title = $active_tab === 'whitelist' ? 'Whitelist' : 'Dashboard';
 
 ob_start();
 ?>
+
+<?php if ($active_tab === 'dashboard'): ?>
 
 <?php if (!($system['api_configured'] ?? false)): ?>
 <div class="rip-alert" style="background:var(--rip-warning-light); color:var(--rip-warning-text); border:1px solid var(--rip-warning-border); padding:14px 18px; margin-bottom:20px; border-radius:var(--rip-radius-lg); font-size:var(--rip-font-size-base); line-height:1.6;">
@@ -195,6 +197,8 @@ ob_start();
         </table>
     </div>
 </div>
+
+<?php endif; ?>
 
 <!-- Whitelist Section -->
 <?php if (($active_tab ?? '') === 'whitelist'): ?>

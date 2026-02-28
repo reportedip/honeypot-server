@@ -113,7 +113,7 @@ class WordPressProfile extends CmsProfile
         if ($path === '/wp-cron.php') {
             return 'misc';
         }
-        if ($path === '/wp-includes/js/jquery/jquery.min.js') {
+        if (preg_match('#^/wp-includes/(js|css)/.+\.(js|css)$#', $path)) {
             return 'misc';
         }
 
@@ -172,14 +172,30 @@ class WordPressProfile extends CmsProfile
      */
     public function getTemplateData(): array
     {
+        $lang = $this->config['content_language'] ?? 'en';
+        $isGerman = ($lang === 'de');
+
+        $defaultName = $isGerman ? 'Meridian Digitalagentur' : 'Meridian Digital Solutions';
+        $defaultTagline = $isGerman
+            ? 'Webdesign & IT-L&ouml;sungen f&uuml;r wachsende Unternehmen'
+            : 'Web Design & IT Solutions for Growing Businesses';
+
+        $siteName = !empty($this->config['site_name'])
+            ? $this->config['site_name']
+            : $defaultName;
+        $tagline = !empty($this->config['site_tagline'])
+            ? $this->config['site_tagline']
+            : $defaultTagline;
+
         return [
-            'site_name'   => 'My WordPress Site',
-            'site_url'    => $this->getSiteUrl(),
-            'wp_version'  => $this->getVersion(),
-            'theme'       => 'twentytwentyfour',
-            'tagline'     => 'Just another WordPress site',
-            'admin_email' => 'admin@example.com',
-            'language'    => 'en-US',
+            'site_name'        => $siteName,
+            'site_url'         => $this->getSiteUrl(),
+            'wp_version'       => $this->getVersion(),
+            'theme'            => 'twentytwentyfour',
+            'tagline'          => $tagline,
+            'admin_email'      => 'admin@example.com',
+            'language'         => $isGerman ? 'de-DE' : 'en-US',
+            'content_language' => $lang,
         ];
     }
 }

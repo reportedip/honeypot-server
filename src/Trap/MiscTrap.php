@@ -55,13 +55,30 @@ class MiscTrap implements TrapInterface, DatabaseAwareInterface
             return $this->serveSitemap($response, $profile);
         }
 
-        if ($path === '/wp-includes/js/jquery/jquery.min.js') {
-            return $this->serveJqueryForbidden($response);
+        // wp-includes JS/CSS assets - serve minimal content with correct Content-Type
+        if (preg_match('#^/wp-includes/(js|css)/.+\.(js|css)$#', $path, $m)) {
+            return $this->serveMinimalAsset($response, strtolower($m[2]));
         }
 
         // Fallback: 404
         $notFound = new NotFoundTrap();
         return $notFound->handle($request, $response, $profile);
+    }
+
+    /**
+     * Serve a minimal empty asset with the correct Content-Type.
+     */
+    private function serveMinimalAsset(Response $response, string $extension): Response
+    {
+        $response->setStatusCode(200);
+        if ($extension === 'css') {
+            $response->setContentType('text/css; charset=UTF-8');
+            $response->setBody("/* WordPress core stylesheet */\n");
+        } else {
+            $response->setContentType('application/javascript; charset=UTF-8');
+            $response->setBody("/* WordPress core script */\n");
+        }
+        return $response;
     }
 
     private function serveRobotsTxt(Response $response, CmsProfile $profile): Response
@@ -142,19 +159,42 @@ XML;
         }
 
         if ($items === '') {
-            $items = <<<XML
+            $lang = $data['content_language'] ?? 'en';
+            $fallbackItems = ($lang === 'de') ? [
+                ['title' => 'Warum responsives Webdesign 2024 wichtiger denn je ist', 'slug' => 'responsives-webdesign-2024', 'date' => '2024-09-12', 'author' => 'admin', 'cat' => 'Webdesign', 'desc' => 'Mobile Endgeraete machen mittlerweile ueber 60% des weltweiten Web-Traffics aus.'],
+                ['title' => '5 haeufige Sicherheitsluecken in WordPress und wie Sie sich schuetzen', 'slug' => 'wordpress-sicherheitstipps', 'date' => '2024-08-23', 'author' => 'admin', 'cat' => 'Sicherheit', 'desc' => 'WordPress betreibt ueber 40% aller Websites weltweit und ist damit ein beliebtes Ziel fuer Angreifer.'],
+                ['title' => 'Neue Partnerschaft mit CloudSecure fuer erweiterten DDoS-Schutz', 'slug' => 'partnerschaft-cloudsecure', 'date' => '2024-07-05', 'author' => 'editor', 'cat' => 'Unternehmen', 'desc' => 'Wir freuen uns, unsere neue Partnerschaft mit CloudSecure bekannt zu geben.'],
+                ['title' => 'SEO-Grundlagen: Meta-Tags und strukturierte Daten richtig einsetzen', 'slug' => 'seo-grundlagen-meta-tags', 'date' => '2024-06-18', 'author' => 'admin', 'cat' => 'SEO', 'desc' => 'Suchmaschinenoptimierung beginnt bei den Grundlagen.'],
+                ['title' => 'Sommeraktion: Kostenlose Website-Analyse fuer Neukunden', 'slug' => 'sommeraktion-website-analyse', 'date' => '2024-05-02', 'author' => 'editor', 'cat' => 'Angebote', 'desc' => 'Nutzen Sie unsere kostenlose Website-Analyse und erfahren Sie, wie Sie Ihre Website verbessern koennen.'],
+            ] : [
+                ['title' => 'Why Responsive Web Design Matters More Than Ever in 2024', 'slug' => 'responsive-web-design-2024', 'date' => '2024-09-12', 'author' => 'admin', 'cat' => 'Web Design', 'desc' => 'Mobile devices now account for over 60% of global web traffic.'],
+                ['title' => '5 Common WordPress Security Vulnerabilities and How to Protect Your Site', 'slug' => 'wordpress-security-tips', 'date' => '2024-08-23', 'author' => 'admin', 'cat' => 'Security', 'desc' => 'WordPress powers over 40% of all websites worldwide, making it a prime target for attackers.'],
+                ['title' => 'New Partnership with CloudSecure for Enhanced DDoS Protection', 'slug' => 'partnership-cloudsecure', 'date' => '2024-07-05', 'author' => 'editor', 'cat' => 'Company News', 'desc' => 'We are excited to announce our new partnership with CloudSecure.'],
+                ['title' => 'SEO Basics: How to Properly Implement Meta Tags and Structured Data', 'slug' => 'seo-basics-meta-tags', 'date' => '2024-06-18', 'author' => 'admin', 'cat' => 'SEO', 'desc' => 'Search engine optimization starts with the fundamentals.'],
+                ['title' => 'Summer Special: Free Website Audit for New Clients', 'slug' => 'summer-special-website-audit', 'date' => '2024-05-02', 'author' => 'editor', 'cat' => 'Offers', 'desc' => 'Take advantage of our free website audit and discover how to improve your website.'],
+            ];
+            foreach ($fallbackItems as $fi) {
+                $fiTitle = htmlspecialchars($fi['title'], ENT_XML1, 'UTF-8');
+                $fiDate = substr($fi['date'], 0, 4);
+                $fiMonth = substr($fi['date'], 5, 2);
+                $fiLink = "/{$fiDate}/{$fiMonth}/{$fi['slug']}/";
+                $fiPubDate = gmdate('D, d M Y H:i:s', strtotime($fi['date'])) . ' +0000';
+                $fiCat = htmlspecialchars($fi['cat'], ENT_XML1, 'UTF-8');
+                $fiDesc = htmlspecialchars($fi['desc'], ENT_XML1, 'UTF-8');
+                $items .= <<<XML
 
     <item>
-        <title>Hello world!</title>
-        <link>/hello-world/</link>
-        <dc:creator><![CDATA[admin]]></dc:creator>
-        <pubDate>{$now}</pubDate>
-        <category><![CDATA[Uncategorized]]></category>
-        <guid isPermaLink="false">/?p=1</guid>
-        <description><![CDATA[Welcome to our site. This is your first post. Edit or delete it, then start writing!]]></description>
-        <content:encoded><![CDATA[<p>Welcome to our site. This is your first post. Edit or delete it, then start writing!</p>]]></content:encoded>
+        <title>{$fiTitle}</title>
+        <link>{$fiLink}</link>
+        <dc:creator><![CDATA[{$fi['author']}]]></dc:creator>
+        <pubDate>{$fiPubDate}</pubDate>
+        <category><![CDATA[{$fiCat}]]></category>
+        <guid isPermaLink="false">{$fiLink}</guid>
+        <description><![CDATA[{$fiDesc}]]></description>
+        <content:encoded><![CDATA[<p>{$fiDesc}</p>]]></content:encoded>
     </item>
 XML;
+            }
         }
 
         // CMS-specific generator
@@ -184,7 +224,7 @@ XML;
     <link>/</link>
     <description>{$tagline}</description>
     <lastBuildDate>{$now}</lastBuildDate>
-    <language>en-US</language>
+    <language>{$data['language']}</language>
     <sy:updatePeriod>hourly</sy:updatePeriod>
     <sy:updateFrequency>1</sy:updateFrequency>
     <generator>{$generator}</generator>{$items}
@@ -243,21 +283,36 @@ XML;
 
         // Add static fallback entries if no generated content
         if ($this->db === null) {
-            $urls .= <<<XML
+            $data = $profile->getTemplateData();
+            $lang = $data['content_language'] ?? 'en';
+            $fallbackSlugs = ($lang === 'de')
+                ? [
+                    ['y' => '2024', 'm' => '09', 's' => 'responsives-webdesign-2024', 'd' => '2024-09-12'],
+                    ['y' => '2024', 'm' => '08', 's' => 'wordpress-sicherheitstipps', 'd' => '2024-08-23'],
+                    ['y' => '2024', 'm' => '07', 's' => 'partnerschaft-cloudsecure', 'd' => '2024-07-05'],
+                    ['y' => '2024', 'm' => '06', 's' => 'seo-grundlagen-meta-tags', 'd' => '2024-06-18'],
+                    ['y' => '2024', 'm' => '05', 's' => 'sommeraktion-website-analyse', 'd' => '2024-05-02'],
+                ]
+                : [
+                    ['y' => '2024', 'm' => '09', 's' => 'responsive-web-design-2024', 'd' => '2024-09-12'],
+                    ['y' => '2024', 'm' => '08', 's' => 'wordpress-security-tips', 'd' => '2024-08-23'],
+                    ['y' => '2024', 'm' => '07', 's' => 'partnership-cloudsecure', 'd' => '2024-07-05'],
+                    ['y' => '2024', 'm' => '06', 's' => 'seo-basics-meta-tags', 'd' => '2024-06-18'],
+                    ['y' => '2024', 'm' => '05', 's' => 'summer-special-website-audit', 'd' => '2024-05-02'],
+                ];
+            foreach ($fallbackSlugs as $fs) {
+                $fLoc = "/{$fs['y']}/{$fs['m']}/{$fs['s']}/";
+                $fMod = gmdate('Y-m-d\TH:i:s+00:00', strtotime($fs['d']));
+                $urls .= <<<XML
 
     <url>
-        <loc>/hello-world/</loc>
-        <lastmod>{$now}</lastmod>
+        <loc>{$fLoc}</loc>
+        <lastmod>{$fMod}</lastmod>
         <changefreq>monthly</changefreq>
-        <priority>0.8</priority>
-    </url>
-    <url>
-        <loc>/sample-page/</loc>
-        <lastmod>{$now}</lastmod>
-        <changefreq>monthly</changefreq>
-        <priority>0.8</priority>
+        <priority>0.6</priority>
     </url>
 XML;
+            }
         }
 
         $response->setStatusCode(200);
@@ -271,21 +326,4 @@ XML);
         return $response;
     }
 
-    private function serveJqueryForbidden(Response $response): Response
-    {
-        $response->setStatusCode(403);
-        $response->setContentType('text/html; charset=UTF-8');
-        $response->setBody(<<<'HTML'
-<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
-<html><head>
-<title>403 Forbidden</title>
-</head><body>
-<h1>Forbidden</h1>
-<p>You don't have permission to access this resource.</p>
-<hr>
-<address>Apache/2.4.58 (Ubuntu) Server at localhost Port 80</address>
-</body></html>
-HTML);
-        return $response;
-    }
 }

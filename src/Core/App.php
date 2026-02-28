@@ -155,7 +155,7 @@ final class App
      */
     private function loadProfile(string $profileName): CmsProfile
     {
-        return ProfileFactory::create($profileName);
+        return ProfileFactory::create($profileName, $this->config->all());
     }
 
     /**

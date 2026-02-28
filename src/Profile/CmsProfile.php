@@ -14,12 +14,25 @@ abstract class CmsProfile
 {
     protected string $siteUrl = '';
 
+    /** @var array<string, mixed> */
+    protected array $config = [];
+
     /**
      * Set the site URL derived from the current request.
      */
     public function setSiteUrl(string $url): void
     {
         $this->siteUrl = rtrim($url, '/');
+    }
+
+    /**
+     * Set application config for use in template data and content generation.
+     *
+     * @param array<string, mixed> $config
+     */
+    public function setConfig(array $config): void
+    {
+        $this->config = $config;
     }
 
     /**

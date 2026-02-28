@@ -7,6 +7,8 @@ namespace ReportedIp\Honeypot\Trap;
 use ReportedIp\Honeypot\Core\Request;
 use ReportedIp\Honeypot\Core\Response;
 use ReportedIp\Honeypot\Profile\CmsProfile;
+use ReportedIp\Honeypot\Trap\Data\WordPressPluginRegistry;
+use ReportedIp\Honeypot\Trap\Data\WordPressThemeRegistry;
 
 /**
  * Fake vulnerability response trap.
@@ -94,12 +96,111 @@ class FakeVulnTrap implements TrapInterface
             return $response;
         }
 
-        // /wp-content/plugins/revslider/ - Fake directory listing
-        if (str_starts_with($path, '/wp-content/plugins/revslider/')) {
-            $response->setStatusCode(200);
+        // Plugin readme.txt - WPScan checks these for Stable tag
+        if (preg_match('#^/wp-content/plugins/([\w-]+)/readme\.txt$#i', $path, $m)) {
+            $readme = WordPressPluginRegistry::generateReadmeTxt($m[1]);
+            if ($readme !== null) {
+                $response->setStatusCode(200);
+                $response->setContentType('text/plain; charset=UTF-8');
+                $response->setBody($readme);
+                return $response;
+            }
+            $notFound = new NotFoundTrap();
+            return $notFound->handle($request, $response, $profile);
+        }
+
+        // Plugin changelog.txt - some scanners check this too
+        if (preg_match('#^/wp-content/plugins/([\w-]+)/changelog\.txt$#i', $path, $m)) {
+            $readme = WordPressPluginRegistry::generateReadmeTxt($m[1]);
+            if ($readme !== null) {
+                // Extract changelog section from readme
+                $changelogStart = strpos($readme, '== Changelog ==');
+                $changelog = $changelogStart !== false ? substr($readme, $changelogStart) : '';
+                $response->setStatusCode(200);
+                $response->setContentType('text/plain; charset=UTF-8');
+                $response->setBody($changelog);
+                return $response;
+            }
+            $notFound = new NotFoundTrap();
+            return $notFound->handle($request, $response, $profile);
+        }
+
+        // Plugin CSS/JS assets
+        if (preg_match('#^/wp-content/plugins/([\w-]+)/.+\.(css|js)$#i', $path, $m)) {
+            $slug = $m[1];
+            $ext = strtolower($m[2]);
+            if (WordPressPluginRegistry::hasPlugin($slug)) {
+                $response->setStatusCode(200);
+                if ($ext === 'css') {
+                    $response->setContentType('text/css; charset=UTF-8');
+                    $response->setBody(WordPressPluginRegistry::generateMinimalCss($slug) ?? '');
+                } else {
+                    $response->setContentType('application/javascript; charset=UTF-8');
+                    $response->setBody(WordPressPluginRegistry::generateMinimalJs($slug) ?? '');
+                }
+                return $response;
+            }
+        }
+
+        // Plugin directory (known plugins = empty 200, unknown = 403)
+        if (preg_match('#^/wp-content/plugins/([\w-]+)/?$#i', $path, $m)) {
+            if (WordPressPluginRegistry::hasPlugin($m[1])) {
+                $response->setStatusCode(200);
+                $response->setContentType('text/html; charset=UTF-8');
+                $response->setBody('');
+                return $response;
+            }
+            $response->setStatusCode(403);
             $response->setContentType('text/html; charset=UTF-8');
-            $response->setBody($this->getFakeDirectoryListing($path));
+            $response->setBody($this->getForbiddenPage());
             return $response;
+        }
+
+        // Plugin subdirectories (known = 200, unknown = 403)
+        if (preg_match('#^/wp-content/plugins/([\w-]+)/(.+)$#i', $path, $m)) {
+            if (WordPressPluginRegistry::hasPlugin($m[1])) {
+                $response->setStatusCode(200);
+                $response->setContentType('text/html; charset=UTF-8');
+                $response->setBody('');
+                return $response;
+            }
+            $response->setStatusCode(403);
+            $response->setContentType('text/html; charset=UTF-8');
+            $response->setBody($this->getForbiddenPage());
+            return $response;
+        }
+
+        // Theme style.css - WPScan checks for Version: header
+        if (preg_match('#^/wp-content/themes/([\w-]+)/style\.css$#i', $path, $m)) {
+            $styleCss = WordPressThemeRegistry::generateStyleCss($m[1]);
+            if ($styleCss !== null) {
+                $response->setStatusCode(200);
+                $response->setContentType('text/css; charset=UTF-8');
+                $response->setBody($styleCss);
+                return $response;
+            }
+            $notFound = new NotFoundTrap();
+            return $notFound->handle($request, $response, $profile);
+        }
+
+        // Theme directory and subdirectories (known themes)
+        if (preg_match('#^/wp-content/themes/([\w-]+)(?:/(.*))?$#i', $path, $m)) {
+            $themeSlug = $m[1];
+            $subpath = $m[2] ?? '';
+            $dirResponse = WordPressThemeRegistry::getThemeDirectoryResponse($themeSlug, $subpath);
+            if ($dirResponse !== null) {
+                $response->setStatusCode($dirResponse['status']);
+                $response->setContentType($dirResponse['content_type']);
+                $response->setBody($dirResponse['body']);
+                return $response;
+            }
+            // Unknown theme
+            if (!WordPressThemeRegistry::hasTheme($themeSlug)) {
+                $response->setStatusCode(403);
+                $response->setContentType('text/html; charset=UTF-8');
+                $response->setBody($this->getForbiddenPage());
+                return $response;
+            }
         }
 
         // /wp-content/uploads/ - Fake directory listing
@@ -357,7 +458,7 @@ HTML;
 {$dates[3]} PHP Fatal error:  Allowed memory size of 268435456 bytes exhausted (tried to allocate 4096 bytes) in /var/www/html/wp-includes/wp-db.php on line 2056
 {$dates[4]} PHP Warning:  file_get_contents(/var/www/html/wp-content/uploads/2024/01/backup.sql): failed to open stream: No such file or directory in /var/www/html/wp-content/plugins/backup-plugin/backup.php on line 112
 {$dates[5]} PHP Notice:  Undefined index: user_login in /var/www/html/wp-includes/user.php on line 237
-{$dates[6]} PHP Warning:  Invalid argument supplied for foreach() in /var/www/html/wp-content/themes/flavor_flavor_flavor_flavor/functions.php on line 89
+{$dates[6]} PHP Warning:  Invalid argument supplied for foreach() in /var/www/html/wp-content/themes/Avada/includes/lib/inc/class-fusion-dynamic-css.php on line 89
 {$dates[7]} PHP Warning:  mysqli_real_connect(): (HY000/2002): Connection refused in /var/www/html/wp-includes/class-wpdb.php on line 1987
 {$dates[8]} WordPress database error Table 'wordpress_db.wp_options' doesn't exist for query SELECT option_value FROM wp_options WHERE option_name = 'siteurl' LIMIT 1
 {$dates[9]} PHP Notice:  Trying to access array offset on value of type bool in /var/www/html/wp-content/plugins/woocommerce/includes/class-wc-session-handler.php on line 73
