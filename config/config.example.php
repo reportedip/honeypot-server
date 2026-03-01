@@ -37,6 +37,9 @@ return [
     // Max log entries per IP per minute (prevents log flooding)
     'rate_limit_per_ip' => 10,
 
+    // Cooldown in minutes per IP+category combination (prevents duplicate reports)
+    'category_cooldown_minutes' => 15,
+
     // Max API reports per minute
     'report_rate_limit' => 60,
 

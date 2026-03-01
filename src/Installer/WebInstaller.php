@@ -123,6 +123,7 @@ class WebInstaller
             'cache_path'          => "__DIR__ . '/../data/cache'",
             'cache_ttl'           => 3600,
             'rate_limit_per_ip'   => 10,
+            'category_cooldown_minutes' => 15,
             'report_rate_limit'   => 60,
             'report_batch_size'   => 10,
             'queue_mode'          => 'web',

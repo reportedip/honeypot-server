@@ -52,6 +52,26 @@ final class Logger
         $allCategories = array_unique($allCategories);
         sort($allCategories);
 
+        // Category cooldown: skip categories already logged for this IP recently
+        $cooldownMinutes = (int) $this->config->get('category_cooldown_minutes', 15);
+        if ($cooldownMinutes > 0) {
+            $alreadyLogged = $this->getRecentCategoriesForIp($ip, $cooldownMinutes);
+            $allCategories = array_values(array_diff($allCategories, $alreadyLogged));
+
+            if (empty($allCategories)) {
+                return;
+            }
+
+            // Filter comments to only keep results that contribute new categories
+            $comments = [];
+            foreach ($detectionResults as $result) {
+                $newFromResult = array_diff($result->getCategories(), $alreadyLogged);
+                if (!empty($newFromResult)) {
+                    $comments[] = sprintf('[%s] %s', $result->getAnalyzerName(), $result->getComment());
+                }
+            }
+        }
+
         $postData = $request->getPostData();
         $postJson = null;
         if (!empty($postData)) {
@@ -242,6 +262,31 @@ final class Logger
         )->fetchColumn();
 
         return $count >= $limit;
+    }
+
+    /**
+     * Get category IDs already logged for an IP within the given time window.
+     *
+     * @return int[]
+     */
+    private function getRecentCategoriesForIp(string $ip, int $minutes): array
+    {
+        $stmt = $this->db->query(
+            'SELECT categories FROM honeypot_logs WHERE ip = ? AND timestamp >= datetime(\'now\', ?)',
+            [$ip, '-' . $minutes . ' minutes']
+        );
+
+        $rows = $stmt->fetchAll();
+        $categories = [];
+        foreach ($rows as $row) {
+            if (!empty($row['categories'])) {
+                foreach (explode(',', $row['categories']) as $catId) {
+                    $categories[] = (int) $catId;
+                }
+            }
+        }
+
+        return array_unique($categories);
     }
 
     /**
