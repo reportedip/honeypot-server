@@ -117,6 +117,11 @@ class WordPressProfile extends CmsProfile
             return 'misc';
         }
 
+        // Static assets in themes, plugins and uploads (CSS, JS, images, fonts)
+        if (preg_match('#^/wp-content/.+\.(css|js|png|jpg|jpeg|gif|svg|woff2?|ttf|eot|ico|map)$#i', $path)) {
+            return 'misc';
+        }
+
         // Admin area
         if (str_starts_with($path, '/wp-admin')) {
             return 'admin';

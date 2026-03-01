@@ -81,7 +81,13 @@ final class App
             $request->getQueryParams()
         );
 
-        if (!$isWhitelisted) {
+        // Static assets embedded in honeypot templates: skip detection + visitor logging
+        $isStaticAsset = (bool) preg_match(
+            '#\.(css|js|png|jpg|jpeg|gif|svg|ico|woff2?|ttf|eot|map)$#i',
+            $request->getPath()
+        );
+
+        if (!$isWhitelisted && !$isStaticAsset) {
             // Legitimate bots on content/home/misc pages skip detection
             if (in_array($routeType, ['content', 'home', 'misc'], true)
                 && BotDetector::isLegitimateBot($request->getUserAgent())) {
@@ -100,8 +106,10 @@ final class App
             }
         }
 
-        // Log visitor type for bot statistics
-        $this->logVisitor($request, $results, $routeType);
+        // Log visitor type for bot statistics (only for real page requests, not assets)
+        if (!$isStaticAsset) {
+            $this->logVisitor($request, $results, $routeType);
+        }
 
         // Serve appropriate trap response regardless of whitelist status
         $this->serveTrap($request, $router);
@@ -336,13 +344,9 @@ final class App
             $botName = $classification['name'];
 
             // Override to 'hacker' if detection pipeline found threats
-            if (!empty($detectionResults)) {
+            // but preserve classification for known good bots and AI agents
+            if (!empty($detectionResults) && !in_array($visitorType, ['good_bot', 'ai_agent'], true)) {
                 $visitorType = 'hacker';
-            }
-
-            // Skip human visitors if configured to do so
-            if ($visitorType === 'human' && !$this->config->get('log_human_visitors', false)) {
-                return;
             }
 
             $visitorLogger = new VisitorLogger($this->db);

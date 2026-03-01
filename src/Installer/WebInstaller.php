@@ -138,7 +138,7 @@ class WebInstaller
             'debug'               => false,
             'log_retention_days'  => 90,
             'session_lifetime'    => 3600,
-            'log_human_visitors'  => false,
+            'log_human_visitors'  => true,
             'ca_bundle'           => '',
             'openai_api_key'      => $openaiKey,
             'openai_base_url'     => $openaiBaseUrl,

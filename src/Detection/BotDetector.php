@@ -78,6 +78,11 @@ final class BotDetector
                 return true;
             }
         }
+        foreach (self::AI_AGENTS as $pattern => $name) {
+            if (stripos($userAgent, $pattern) !== false) {
+                return true;
+            }
+        }
         return false;
     }
 

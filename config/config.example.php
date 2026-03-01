@@ -82,7 +82,7 @@ return [
     'session_lifetime' => 3600,
 
     // Log human visitors (non-bot, non-attacker traffic)
-    'log_human_visitors' => false,
+    'log_human_visitors' => true,
 
     // Custom CA bundle path for cURL (leave empty for system default)
     'ca_bundle' => '',
