@@ -79,16 +79,25 @@ class FakeVulnTrap implements TrapInterface
             return $restApi->handle($request, $response, $profile);
         }
 
-        // ?author=1 - User enumeration redirect
+        // ?author=1 - User enumeration redirect (must use absolute URL like real WordPress)
         if (str_contains($path, '?author=') || str_contains($request->getUri(), 'author=')) {
-            $response->redirect('/author/admin/', 301);
+            $authorId = $request->getQueryParam('author');
+            if ($authorId === '1') {
+                $response->redirect($profile->getSiteUrl() . '/author/admin/', 301);
+            } elseif ($authorId === '2') {
+                $response->redirect($profile->getSiteUrl() . '/author/editor/', 301);
+            } else {
+                $notFound = new NotFoundTrap();
+                return $notFound->handle($request, $response, $profile);
+            }
             return $response;
         }
 
-        // /author/admin/ - Author page
+        // /author/{slug}/ - Author page
         if (str_starts_with($path, '/author/')) {
+            $slug = trim(explode('/', ltrim($path, '/'), 3)[1] ?? 'admin');
             $data = $profile->getTemplateData();
-            $data['author_name'] = 'admin';
+            $data['author_name'] = $slug !== '' ? $slug : 'admin';
             $data['is_author_page'] = true;
             $response->setStatusCode(200);
             $response->setContentType('text/html; charset=UTF-8');
