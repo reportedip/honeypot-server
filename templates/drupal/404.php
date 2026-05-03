@@ -71,6 +71,7 @@ footer.site-footer a{color:#55b3ea}
 
 <footer class="site-footer">
 <p>&copy; <?php echo $year; ?> <?php echo $siteName; ?>. Powered by <a href="https://www.drupal.org">Drupal</a></p>
+<p style="font-size:11px;opacity:0.7;margin-top:6px;">Protected by <a href="https://reportedip.de/" rel="noopener">reportedip.de</a></p>
 </footer>
 
 </body>

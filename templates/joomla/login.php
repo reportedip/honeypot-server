@@ -137,6 +137,7 @@ body{font-family:"Roboto",-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica
 
 <div class="login-footer">
 <p>&copy; <?php echo date('Y'); ?> <?php echo $siteName; ?>. Powered by <a href="https://www.joomla.org">Joomla!</a> <?php echo $version; ?></p>
+<p style="font-size:11px;opacity:0.7;margin-top:6px;">Protected by <a href="https://reportedip.de/" rel="noopener">reportedip.de</a></p>
 </div>
 </div>
 
