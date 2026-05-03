@@ -62,35 +62,88 @@ ob_start();
     </div>
 </div>
 
-<!-- Activity Chart (last 24h) -->
-<div class="rip-card">
-    <div class="rip-card__header">Activity (Last 24 Hours)</div>
-    <?php
-    $maxCount = 1;
-    foreach ($chart_data as $bar) {
-        if ($bar['count'] > $maxCount) {
-            $maxCount = $bar['count'];
-        }
-    }
-    ?>
-    <div style="display:flex; align-items:flex-end; gap:3px; height:120px; padding-top:8px;">
-        <?php foreach ($chart_data as $bar): ?>
-            <?php $pct = $maxCount > 0 ? ($bar['count'] / $maxCount) * 100 : 0; ?>
-            <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;" title="<?= htmlspecialchars($bar['hour'], ENT_QUOTES, 'UTF-8') ?>: <?= $bar['count'] ?> events">
-                <div style="width:100%; min-height:2px; max-height:100%; height:<?= max(2, $pct) ?>%; background:<?= $pct > 70 ? 'var(--rip-danger)' : ($pct > 30 ? 'var(--rip-warning)' : 'var(--rip-primary)') ?>; border-radius:3px 3px 0 0; transition:height 0.3s;"></div>
+<!-- Activity Chart with range tabs (24h / 7d / 30d) -->
+<?php
+    $chartRanges = $chart_data_ranges ?? ['24h' => $chart_data ?? [], '7d' => [], '30d' => []];
+    $rangeMeta = [
+        '24h' => ['title' => 'Last 24 Hours', 'tab' => '24h',     'every' => 4],
+        '7d'  => ['title' => 'Last 7 Days',   'tab' => '7 days',  'every' => 1],
+        '30d' => ['title' => 'Last 30 Days',  'tab' => '30 days', 'every' => 5],
+    ];
+?>
+<div class="rip-card" data-rip-activity-card>
+    <div class="rip-card__header" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+        <span data-rip-activity-title>Activity (<?= htmlspecialchars($rangeMeta['24h']['title'], ENT_QUOTES, 'UTF-8') ?>)</span>
+        <div role="tablist" aria-label="Activity range" style="display:inline-flex; gap:4px; background:var(--rip-gray-100); padding:3px; border-radius:var(--rip-radius-full);">
+            <?php foreach ($rangeMeta as $rangeKey => $meta): ?>
+                <button type="button" role="tab"
+                        data-rip-activity-tab="<?= htmlspecialchars($rangeKey, ENT_QUOTES, 'UTF-8') ?>"
+                        aria-selected="<?= $rangeKey === '24h' ? 'true' : 'false' ?>"
+                        style="border:none; cursor:pointer; padding:4px 12px; font:inherit; font-size:var(--rip-font-size-sm); font-weight:500; border-radius:var(--rip-radius-full); background:<?= $rangeKey === '24h' ? 'var(--rip-bg-card)' : 'transparent' ?>; color:<?= $rangeKey === '24h' ? 'var(--rip-primary)' : 'var(--rip-gray-500)' ?>; box-shadow:<?= $rangeKey === '24h' ? 'var(--rip-shadow-sm)' : 'none' ?>; transition:all 0.15s;">
+                    <?= htmlspecialchars($meta['tab'], ENT_QUOTES, 'UTF-8') ?>
+                </button>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php foreach ($rangeMeta as $rangeKey => $meta): ?>
+        <?php
+            $bars = $chartRanges[$rangeKey] ?? [];
+            $maxCount = 1;
+            foreach ($bars as $bar) {
+                if (($bar['count'] ?? 0) > $maxCount) {
+                    $maxCount = (int) $bar['count'];
+                }
+            }
+        ?>
+        <div data-rip-activity-panel="<?= htmlspecialchars($rangeKey, ENT_QUOTES, 'UTF-8') ?>"
+             data-rip-activity-title-text="<?= htmlspecialchars('Activity (' . $meta['title'] . ')', ENT_QUOTES, 'UTF-8') ?>"
+             style="display:<?= $rangeKey === '24h' ? 'block' : 'none' ?>;">
+            <div style="display:flex; align-items:flex-end; gap:3px; height:120px; padding-top:8px;">
+                <?php foreach ($bars as $bar): ?>
+                    <?php $pct = $maxCount > 0 ? (((int) $bar['count']) / $maxCount) * 100 : 0; ?>
+                    <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;" title="<?= htmlspecialchars($bar['label'] ?? '', ENT_QUOTES, 'UTF-8') ?>: <?= (int) ($bar['count'] ?? 0) ?> events">
+                        <div style="width:100%; min-height:2px; max-height:100%; height:<?= max(2, $pct) ?>%; background:<?= $pct > 70 ? 'var(--rip-danger)' : ($pct > 30 ? 'var(--rip-warning)' : 'var(--rip-primary)') ?>; border-radius:3px 3px 0 0; transition:height 0.3s;"></div>
+                    </div>
+                <?php endforeach; ?>
             </div>
-        <?php endforeach; ?>
-    </div>
-    <div style="display:flex; gap:3px; margin-top:4px;">
-        <?php foreach ($chart_data as $i => $bar): ?>
-            <?php if ($i % 4 === 0): ?>
-                <div style="flex:1; text-align:center; font-size:var(--rip-font-size-xs); color:var(--rip-gray-400);"><?= htmlspecialchars($bar['hour'], ENT_QUOTES, 'UTF-8') ?></div>
-            <?php else: ?>
-                <div style="flex:1;"></div>
-            <?php endif; ?>
-        <?php endforeach; ?>
-    </div>
+            <div style="display:flex; gap:3px; margin-top:4px;">
+                <?php foreach ($bars as $i => $bar): ?>
+                    <?php if ($i % $meta['every'] === 0): ?>
+                        <div style="flex:1; text-align:center; font-size:var(--rip-font-size-xs); color:var(--rip-gray-400);"><?= htmlspecialchars($bar['label'] ?? '', ENT_QUOTES, 'UTF-8') ?></div>
+                    <?php else: ?>
+                        <div style="flex:1;"></div>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    <?php endforeach; ?>
 </div>
+<script>
+(function() {
+    var card = document.querySelector('[data-rip-activity-card]');
+    if (!card) return;
+    var titleEl = card.querySelector('[data-rip-activity-title]');
+    card.querySelectorAll('[data-rip-activity-tab]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var range = btn.getAttribute('data-rip-activity-tab');
+            card.querySelectorAll('[data-rip-activity-tab]').forEach(function(b) {
+                var active = b === btn;
+                b.setAttribute('aria-selected', active ? 'true' : 'false');
+                b.style.background = active ? 'var(--rip-bg-card)' : 'transparent';
+                b.style.color = active ? 'var(--rip-primary)' : 'var(--rip-gray-500)';
+                b.style.boxShadow = active ? 'var(--rip-shadow-sm)' : 'none';
+            });
+            card.querySelectorAll('[data-rip-activity-panel]').forEach(function(p) {
+                var match = p.getAttribute('data-rip-activity-panel') === range;
+                p.style.display = match ? 'block' : 'none';
+                if (match && titleEl) {
+                    titleEl.textContent = p.getAttribute('data-rip-activity-title-text') || titleEl.textContent;
+                }
+            });
+        });
+    });
+})();
+</script>
 
 <!-- Visitor Breakdown (24h) -->
 <?php
@@ -365,6 +418,46 @@ ob_start();
                     ?>
                     <div style="flex:1; min-height:3px; height:<?= max(3, $pct) ?>%; background:<?= $color ?>; border-radius:2px;" title="<?= htmlspecialchars($h['time'] ?? '', ENT_QUOTES, 'UTF-8') ?>: <?= $h['sent'] ?? 0 ?> sent, <?= $h['failed'] ?? 0 ?> failed"></div>
                 <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <?php if (!empty($recent_failures)): ?>
+        <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--rip-gray-100);">
+            <strong style="color:var(--rip-gray-600); font-size:var(--rip-font-size-sm);">Recent Failures (Last <?= count($recent_failures) ?>)</strong>
+            <div style="overflow-x:auto; margin-top:8px;">
+                <table class="rip-table rip-table--compact">
+                    <thead><tr><th>Time</th><th>IP</th><th>URI</th><th>Reason</th><th style="text-align:right;">Attempts</th><th>Status</th></tr></thead>
+                    <tbody>
+                    <?php foreach ($recent_failures as $f): ?>
+                        <?php $reason = (string) ($f['last_failure_reason'] ?? ''); ?>
+                        <tr>
+                            <td style="white-space:nowrap; font-size:var(--rip-font-size-xs); color:var(--rip-gray-500);"><?= htmlspecialchars((string) ($f['last_failure_at'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                            <td style="font-family:var(--rip-font-mono); white-space:nowrap;">
+                                <a href="<?= htmlspecialchars($admin_path, ENT_QUOTES, 'UTF-8') ?>/logs?ip=<?= urlencode((string) $f['ip']) ?>" class="rip-link"><?= htmlspecialchars((string) $f['ip'], ENT_QUOTES, 'UTF-8') ?></a>
+                                <a href="https://reportedip.de/ip/<?= urlencode((string) $f['ip']) ?>/" target="_blank" rel="noopener" class="rip-ip-external" title="View on reportedip.de">&#8599;</a>
+                            </td>
+                            <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="<?= htmlspecialchars((string) ($f['request_uri'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                                <?= htmlspecialchars((string) ($f['request_uri'] ?? ''), ENT_QUOTES, 'UTF-8') ?>
+                            </td>
+                            <td style="font-family:var(--rip-font-mono); font-size:var(--rip-font-size-xs); color:var(--rip-danger-text); max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="<?= htmlspecialchars($reason, ENT_QUOTES, 'UTF-8') ?>">
+                                <?= htmlspecialchars($reason, ENT_QUOTES, 'UTF-8') ?>
+                            </td>
+                            <td style="text-align:right; font-weight:600;"><?= number_format((int) ($f['failed_attempts'] ?? 0)) ?></td>
+                            <td>
+                                <?php $sent = (int) ($f['sent'] ?? 0); ?>
+                                <?php if ($sent === 1): ?>
+                                    <span class="rip-badge rip-badge--sent">Sent</span>
+                                <?php elseif ($sent === 2): ?>
+                                    <span class="rip-badge rip-badge--whitelisted">Whitelisted</span>
+                                <?php else: ?>
+                                    <span class="rip-badge rip-badge--pending">Pending</span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
             </div>
         </div>
         <?php endif; ?>

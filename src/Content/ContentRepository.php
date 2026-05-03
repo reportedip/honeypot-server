@@ -73,7 +73,7 @@ final class ContentRepository
     public function getForSitemap(string $profile): array
     {
         $stmt = $this->db->query(
-            'SELECT id, slug, published_date FROM honeypot_content
+            'SELECT id, slug, published_date, content_type FROM honeypot_content
              WHERE cms_profile = ? AND status = ?
              ORDER BY published_date DESC',
             [$profile, 'published']

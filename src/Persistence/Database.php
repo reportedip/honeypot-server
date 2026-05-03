@@ -67,13 +67,23 @@ final class Database
                 request_method TEXT DEFAULT \'GET\',
                 post_data TEXT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                sent INTEGER DEFAULT 0
+                sent INTEGER DEFAULT 0,
+                failed_attempts INTEGER DEFAULT 0,
+                last_failure_at DATETIME,
+                last_failure_reason TEXT
             )
         ');
+
+        $this->ensureColumns('honeypot_logs', [
+            'failed_attempts'     => 'INTEGER DEFAULT 0',
+            'last_failure_at'     => 'DATETIME',
+            'last_failure_reason' => 'TEXT',
+        ]);
 
         $pdo->exec('CREATE INDEX IF NOT EXISTS idx_logs_ip ON honeypot_logs(ip)');
         $pdo->exec('CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON honeypot_logs(timestamp)');
         $pdo->exec('CREATE INDEX IF NOT EXISTS idx_logs_sent ON honeypot_logs(sent)');
+        $pdo->exec('CREATE INDEX IF NOT EXISTS idx_logs_failure_at ON honeypot_logs(last_failure_at)');
 
         $pdo->exec('
             CREATE TABLE IF NOT EXISTS honeypot_whitelist (
@@ -165,5 +175,35 @@ final class Database
         $stmt->execute(array_values($data));
 
         return (int) $this->getConnection()->lastInsertId();
+    }
+
+    /**
+     * Ensure the given columns exist on a table; add any missing ones via ALTER TABLE.
+     *
+     * Idempotent migration helper for upgrading existing databases.
+     *
+     * @param array<string, string> $columns Column name => SQL definition (e.g. "INTEGER DEFAULT 0").
+     */
+    private function ensureColumns(string $table, array $columns): void
+    {
+        if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $table)) {
+            throw new \InvalidArgumentException('Invalid table name.');
+        }
+
+        $pdo = $this->getConnection();
+        $existing = [];
+        foreach ($pdo->query(sprintf('PRAGMA table_info(%s)', $table))->fetchAll() as $row) {
+            $existing[$row['name']] = true;
+        }
+
+        foreach ($columns as $name => $definition) {
+            if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $name)) {
+                throw new \InvalidArgumentException('Invalid column name.');
+            }
+            if (isset($existing[$name])) {
+                continue;
+            }
+            $pdo->exec(sprintf('ALTER TABLE %s ADD COLUMN %s %s', $table, $name, $definition));
+        }
     }
 }

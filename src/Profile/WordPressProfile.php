@@ -104,7 +104,7 @@ class WordPressProfile extends CmsProfile
         }
 
         // Misc WordPress files (robots.txt, feed, wp-cron, sitemap, jquery, index.php)
-        if ($path === '/robots.txt' || $path === '/sitemap.xml') {
+        if ($path === '/robots.txt' || $path === '/sitemap.xml' || $path === '/wp-sitemap.xml') {
             return 'misc';
         }
         if ($path === '/feed/' || $path === '/feed') {
@@ -164,8 +164,23 @@ class WordPressProfile extends CmsProfile
             return 'home';
         }
 
-        // AI-generated content pages: /YYYY/MM/slug/
+        // Query-style permalinks: /?p=N (post) or /?page_id=N (page)
+        if (isset($queryParams['p']) && is_numeric($queryParams['p'])) {
+            return 'content';
+        }
+        if (isset($queryParams['page_id']) && is_numeric($queryParams['page_id'])) {
+            return 'content';
+        }
+
+        // Date-based post permalink: /YYYY/MM/slug/
         if (preg_match('#^/\d{4}/\d{2}/[\w-]+/?$#', $path)) {
+            return 'content';
+        }
+
+        // Top-level page permalink: /slug/ (must be the LAST candidate so all
+        // earlier specific routes win; ContentTrap falls through to NotFound
+        // when the slug does not match a stored page).
+        if (preg_match('#^/[a-z0-9][\w-]*/?$#i', $path)) {
             return 'content';
         }
 

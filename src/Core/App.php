@@ -44,6 +44,33 @@ final class App
         $this->logger = new Logger($this->db, $config);
         $this->whitelist = new Whitelist($this->db);
         $this->registerTraps();
+        $this->maybeSeedDefaults();
+    }
+
+    /**
+     * One-shot seed of WordPress install defaults for legacy installs.
+     *
+     * Marker file in the data directory makes this a no-op after the first run.
+     */
+    private function maybeSeedDefaults(): void
+    {
+        if ($this->profile->getName() !== 'wordpress') {
+            return;
+        }
+
+        $dbPath = (string) $this->config->get('db_path', '');
+        if ($dbPath === '') {
+            return;
+        }
+        $dataDir = dirname($dbPath);
+
+        try {
+            $repo = new \ReportedIp\Honeypot\Content\ContentRepository($this->db);
+            $language = (string) $this->config->get('content_language', 'en');
+            \ReportedIp\Honeypot\Content\WordPressDefaults::seedIfNeeded($repo, $dataDir, $language);
+        } catch (\Throwable $e) {
+            // Silently ignore — seeding is best-effort and never blocks request handling.
+        }
     }
 
     /**
@@ -338,6 +365,10 @@ final class App
      */
     private function logVisitor(Request $request, array $detectionResults, string $routeType): void
     {
+        // Trap routes have no legitimate purpose on a honeypot — any UA hitting them is suspect.
+        // Good bots and AI agents are still preserved (a Googlebot probing /wp-login.php stays good_bot).
+        $suspiciousRoutes = ['login', 'admin', 'vuln', 'register', 'xmlrpc', 'api'];
+
         try {
             $classification = BotDetector::classify($request->getUserAgent());
             $visitorType = $classification['type'];
@@ -346,6 +377,12 @@ final class App
             // Override to 'hacker' if detection pipeline found threats
             // but preserve classification for known good bots and AI agents
             if (!empty($detectionResults) && !in_array($visitorType, ['good_bot', 'ai_agent'], true)) {
+                $visitorType = 'hacker';
+            }
+
+            // Route-based override: visiting trap routes alone is enough to classify as hacker
+            if (in_array($routeType, $suspiciousRoutes, true)
+                && !in_array($visitorType, ['good_bot', 'ai_agent', 'hacker'], true)) {
                 $visitorType = 'hacker';
             }
 

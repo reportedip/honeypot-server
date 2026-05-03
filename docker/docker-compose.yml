@@ -6,6 +6,9 @@ services:
     ports:
       - "9090:80"
     volumes:
-      - ../data:/var/www/honeypot/data
+      # Live-Mount: Code-, Config- und Datenänderungen ohne Rebuild.
+      # Persistente Files (config.php, SQLite, cache) bleiben auf dem Host.
+      - ..:/var/www/honeypot
     environment:
       - HONEYPOT_PROFILE=wordpress
+    restart: unless-stopped

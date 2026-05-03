@@ -1,7 +1,11 @@
-# Runtime data
-/data/
+# Runtime data (SQLite, caches, logs) — keep folder structure, ignore contents
+/data/*
+!/data/.gitkeep
+!/data/cache/
+/data/cache/*
+!/data/cache/.gitkeep
 
-# Local config (contains secrets)
+# Local config (contains API key + password hash — never commit)
 /config/config.php
 
 # Dependencies

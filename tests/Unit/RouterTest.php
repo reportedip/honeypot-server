@@ -64,7 +64,11 @@ final class RouterTest extends TestCase
 
     public function testRouteNotFound(): void
     {
-        $request = $this->createRequest(['uri' => '/some-random-page']);
+        // Top-level single-segment paths now route to 'content' so the
+        // ContentTrap can serve seeded WordPress pages (e.g. /sample-page/).
+        // Genuine not_found requires a multi-segment path that isn't a
+        // date-based permalink.
+        $request = $this->createRequest(['uri' => '/some/random/path/that/does/not/exist']);
         $result = $this->router->route($request);
         $this->t->assertEquals('not_found', $result['trap']);
     }

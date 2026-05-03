@@ -69,6 +69,7 @@ final class ReportQueue
             } else {
                 $result['failed']++;
                 $error = $this->client->getLastError();
+                $this->markFailure((int) $entry['id'], $error);
                 if ($error !== null) {
                     $errorMsg = sprintf('#%d [%s] %s', $entry['id'], $entry['ip'], $error);
                     $result['errors'][] = $errorMsg;
@@ -104,6 +105,22 @@ final class ReportQueue
         $this->db->query(
             sprintf('UPDATE honeypot_logs SET sent = 1 WHERE id IN (%s)', $placeholders),
             $ids
+        );
+    }
+
+    /**
+     * Persist failure metadata on a log entry so the dashboard can display recent failures.
+     */
+    private function markFailure(int $id, ?string $reason): void
+    {
+        $reason = $reason !== null ? mb_substr($reason, 0, 500) : null;
+        $this->db->query(
+            "UPDATE honeypot_logs
+                SET failed_attempts = COALESCE(failed_attempts, 0) + 1,
+                    last_failure_at = datetime('now'),
+                    last_failure_reason = ?
+              WHERE id = ?",
+            [$reason, $id]
         );
     }
 }

@@ -1,0 +1,61 @@
+# Git
+.git
+.gitignore
+.gitattributes
+.github
+
+# Editor / IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+.editorconfig
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Compose files (don't bake into image)
+docker-compose*.yml
+docker/logs
+docker/data
+
+# Claude / AI artefacts (must NOT leak into image)
+.claude
+CLAUDE.md
+.playwright-mcp
+
+# Dependencies (rebuild in container if needed)
+vendor
+node_modules
+
+# Local config (must NOT bake API key into image)
+config/config.php
+
+# Runtime data (must NOT bake into image)
+data/honeypot.sqlite
+data/honeypot.sqlite-shm
+data/honeypot.sqlite-wal
+data/cache
+data/api_errors.log
+data/cron_status.json
+data/login_attempts.json
+
+# Logs / caches
+*.log
+*.cache
+.phpunit.result.cache
+/php-cs-fixer.cache
+
+# Environment files (secrets)
+.env
+.env.*
+
+# Project docs (not needed in runtime image)
+CHANGELOG.md
+CONTRIBUTING.md
+DISCLAIMER.md
+SECURITY.md
+README.md

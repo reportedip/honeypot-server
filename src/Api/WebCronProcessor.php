@@ -17,7 +17,7 @@ use ReportedIp\Honeypot\Persistence\VisitorLogger;
  */
 final class WebCronProcessor
 {
-    private const WEB_BATCH_SIZE = 2;
+    private const WEB_BATCH_SIZE = 5;
     private const CLEANUP_INTERVAL_SECONDS = 3600;
 
     private Database $db;

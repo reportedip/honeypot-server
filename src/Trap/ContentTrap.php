@@ -36,21 +36,32 @@ final class ContentTrap implements TrapInterface, DatabaseAwareInterface
 
         $repo = new ContentRepository($this->db);
         $path = $request->getPath();
+        $queryParams = $request->getQueryParams();
         $profileName = $profile->getName();
         $post = null;
 
-        // Try to find content by slug
+        // Try to find content by slug (date-based or top-level page slug)
         $slug = ContentUrlGenerator::extractSlug($path, $profileName);
         if ($slug !== null) {
             $post = $repo->getBySlug($profileName, $slug);
         }
 
-        // Try to find by ID (Drupal /node/ID)
+        // Try to find by ID via path (Drupal /node/ID)
         if ($post === null) {
             $id = ContentUrlGenerator::extractId($path, $profileName);
             if ($id !== null) {
                 $post = $repo->getById($id);
-                // Ensure it belongs to the correct profile
+                if ($post !== null && $post['cms_profile'] !== $profileName) {
+                    $post = null;
+                }
+            }
+        }
+
+        // Try to find by query-style ID: /?p=N or /?page_id=N (WordPress)
+        if ($post === null) {
+            $queryId = ContentUrlGenerator::extractIdFromQuery($queryParams, $profileName);
+            if ($queryId !== null) {
+                $post = $repo->getById($queryId);
                 if ($post !== null && $post['cms_profile'] !== $profileName) {
                     $post = null;
                 }

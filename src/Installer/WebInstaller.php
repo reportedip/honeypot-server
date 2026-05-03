@@ -248,6 +248,14 @@ class WebInstaller
              foreach (array_unique($serverIps) as $ip) {
                  $whitelist->add($ip, 'Server IP (auto-added by installer)');
              }
+
+             // Seed WordPress install defaults (Hello world!, Sample Page, Privacy Policy)
+             $cmsProfile = $_POST['cms_profile'] ?? 'wordpress';
+             if ($cmsProfile === 'wordpress') {
+                 $repo = new \ReportedIp\Honeypot\Content\ContentRepository($db);
+                 $language = $_POST['content_language'] ?? 'en';
+                 \ReportedIp\Honeypot\Content\WordPressDefaults::seedIfNeeded($repo, $dataDir, $language);
+             }
         } else {
             throw new \RuntimeException("Database class not found. Autoloader issue?");
         }

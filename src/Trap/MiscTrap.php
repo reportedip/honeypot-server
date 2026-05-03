@@ -51,7 +51,7 @@ class MiscTrap implements TrapInterface, DatabaseAwareInterface
             return $this->serveWpCron($response);
         }
 
-        if ($path === '/sitemap.xml') {
+        if ($path === '/sitemap.xml' || $path === '/wp-sitemap.xml') {
             return $this->serveSitemap($response, $profile);
         }
 
@@ -112,7 +112,8 @@ class MiscTrap implements TrapInterface, DatabaseAwareInterface
                 break;
         }
 
-        $body .= "\nSitemap: /sitemap.xml\n";
+        $sitemapPath = $profileName === 'wordpress' ? '/wp-sitemap.xml' : '/sitemap.xml';
+        $body .= "\nSitemap: {$sitemapPath}\n";
         $response->setBody($body);
         return $response;
     }

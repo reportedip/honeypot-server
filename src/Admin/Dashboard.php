@@ -39,14 +39,22 @@ final class Dashboard
     {
         $stats = $this->logger->getStats();
 
+        $chartRanges = [
+            '24h' => $this->getChartData('24h'),
+            '7d'  => $this->getChartData('7d'),
+            '30d' => $this->getChartData('30d'),
+        ];
+
         return [
-            'stats'          => $stats,
-            'recent_logs'    => $this->logger->getRecentLogs(15),
-            'whitelist'      => $this->whitelist->getAll(),
-            'system'         => $this->getSystemInfo(),
-            'chart_data'     => $this->getChartData(),
-            'cron_status'    => $this->getCronStatus(),
-            'visitor_stats'  => $this->getVisitorStats(),
+            'stats'              => $stats,
+            'recent_logs'        => $this->logger->getRecentLogs(15),
+            'whitelist'          => $this->whitelist->getAll(),
+            'system'             => $this->getSystemInfo(),
+            'chart_data'         => $chartRanges['24h'],
+            'chart_data_ranges'  => $chartRanges,
+            'cron_status'        => $this->getCronStatus(),
+            'recent_failures'    => $this->getRecentFailures(5),
+            'visitor_stats'      => $this->getVisitorStats(),
         ];
     }
 
@@ -76,47 +84,114 @@ final class Dashboard
     }
 
     /**
-     * Get data for the activity chart (events per hour, last 24 hours).
+     * Get data for the activity chart, bucketed by hour (24h) or by day (7d / 30d).
      *
-     * @return array<int, array{hour: string, count: int}>
+     * @param string $range '24h', '7d', or '30d'
+     * @return array<int, array{label: string, count: int}>
      */
-    public function getChartData(): array
+    public function getChartData(string $range = '24h'): array
+    {
+        if ($range === '7d') {
+            return $this->getDailyChartData(7);
+        }
+        if ($range === '30d') {
+            return $this->getDailyChartData(30);
+        }
+        return $this->getHourlyChartData(24);
+    }
+
+    /**
+     * Hourly buckets over the last $hours hours.
+     *
+     * @return array<int, array{label: string, count: int}>
+     */
+    private function getHourlyChartData(int $hours): array
     {
         $stmt = $this->db->query(
-            "SELECT strftime('%Y-%m-%d %H:00', timestamp) as hour, COUNT(*) as count
+            "SELECT strftime('%Y-%m-%d %H:00', timestamp) as bucket, COUNT(*) as count
              FROM honeypot_logs
-             WHERE timestamp >= datetime('now', '-24 hours')
-             GROUP BY hour
-             ORDER BY hour ASC"
+             WHERE timestamp >= datetime('now', '-' || ? || ' hours')
+             GROUP BY bucket
+             ORDER BY bucket ASC",
+            [$hours]
         );
 
         $rows = $stmt->fetchAll();
+        $byBucket = [];
+        foreach ($rows as $row) {
+            $byBucket[$row['bucket']] = (int) $row['count'];
+        }
 
-        // Fill gaps with zero counts
         $chart = [];
-        $now = new \DateTime();
-        $start = (clone $now)->modify('-23 hours');
+        $start = (new \DateTime())->modify('-' . ($hours - 1) . ' hours');
 
-        for ($i = 0; $i < 24; $i++) {
-            $hourStr = $start->format('Y-m-d H:00');
-            $count = 0;
-
-            foreach ($rows as $row) {
-                if ($row['hour'] === $hourStr) {
-                    $count = (int) $row['count'];
-                    break;
-                }
-            }
-
+        for ($i = 0; $i < $hours; $i++) {
+            $key = $start->format('Y-m-d H:00');
             $chart[] = [
-                'hour'  => $start->format('H:00'),
-                'count' => $count,
+                'label' => $start->format('H:00'),
+                'count' => $byBucket[$key] ?? 0,
             ];
-
             $start->modify('+1 hour');
         }
 
         return $chart;
+    }
+
+    /**
+     * Daily buckets over the last $days days.
+     *
+     * @return array<int, array{label: string, count: int}>
+     */
+    private function getDailyChartData(int $days): array
+    {
+        $stmt = $this->db->query(
+            "SELECT strftime('%Y-%m-%d', timestamp) as bucket, COUNT(*) as count
+             FROM honeypot_logs
+             WHERE timestamp >= date('now', '-' || ? || ' days')
+             GROUP BY bucket
+             ORDER BY bucket ASC",
+            [$days - 1]
+        );
+
+        $rows = $stmt->fetchAll();
+        $byBucket = [];
+        foreach ($rows as $row) {
+            $byBucket[$row['bucket']] = (int) $row['count'];
+        }
+
+        $chart = [];
+        $start = (new \DateTime())->setTime(0, 0, 0)->modify('-' . ($days - 1) . ' days');
+
+        for ($i = 0; $i < $days; $i++) {
+            $key = $start->format('Y-m-d');
+            $chart[] = [
+                'label' => $start->format('m-d'),
+                'count' => $byBucket[$key] ?? 0,
+            ];
+            $start->modify('+1 day');
+        }
+
+        return $chart;
+    }
+
+    /**
+     * Get the most recent failed report attempts for the dashboard.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getRecentFailures(int $limit = 5): array
+    {
+        $stmt = $this->db->query(
+            'SELECT id, ip, request_uri, request_method, categories,
+                    last_failure_at, last_failure_reason, failed_attempts, sent
+               FROM honeypot_logs
+              WHERE last_failure_at IS NOT NULL
+              ORDER BY last_failure_at DESC
+              LIMIT ?',
+            [$limit]
+        );
+
+        return $stmt->fetchAll();
     }
 
     /**
