@@ -142,7 +142,7 @@ Tags: <a href="<?= $siteUrl ?>/taxonomy/term/1"><?= $postCategory ?></a>
 <footer class="site-footer">
 <p>&copy; <?= $year ?> <?= $siteName ?>. All rights reserved.</p>
 <p>Powered by <a href="https://www.drupal.org">Drupal</a></p>
-<p style="font-size:11px;opacity:0.7;margin-top:6px;">Protected by <a href="https://reportedip.de/" rel="noopener">reportedip.de</a></p>
+<p style="font-size:11px;opacity:0.7;margin-top:6px;">Protected by <a href="https://reportedip.de/" target="_blank" rel="noopener noreferrer">reportedip.de</a></p>
 </footer>
 
 </div>

@@ -130,7 +130,7 @@ footer.site-footer{background:#1b1b1b;color:#929296;text-align:center;padding:20
 
 <footer class="site-footer">
 <p>Powered by <a href="https://www.drupal.org">Drupal</a></p>
-<p style="font-size:11px;opacity:0.7;margin-top:6px;">Protected by <a href="https://reportedip.de/" rel="noopener">reportedip.de</a></p>
+<p style="font-size:11px;opacity:0.7;margin-top:6px;">Protected by <a href="https://reportedip.de/" target="_blank" rel="noopener noreferrer">reportedip.de</a></p>
 </footer>
 
 </body>

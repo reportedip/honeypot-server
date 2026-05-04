@@ -119,7 +119,7 @@ a:hover{color:#005177;text-decoration:underline}
 <footer class="site-footer">
 <p>Proudly powered by <a href="https://wordpress.org/">WordPress</a>.</p>
 <p>&copy; <?php echo $year; ?> <?php echo $siteName; ?>. All rights reserved.</p>
-<p style="font-size:11px;opacity:0.7;margin-top:6px;">Protected by <a href="https://reportedip.de/" rel="noopener">reportedip.de</a></p>
+<p style="font-size:11px;opacity:0.7;margin-top:6px;">Protected by <a href="https://reportedip.de/" target="_blank" rel="noopener noreferrer">reportedip.de</a></p>
 </footer>
 
 </body>

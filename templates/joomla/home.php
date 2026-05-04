@@ -264,7 +264,7 @@ nav.top-nav a:hover{background:#1d3557;color:#fff}
 <footer class="site-footer">
 <p>&copy; <?php echo $year; ?> <?php echo $siteName; ?>. All Rights Reserved.</p>
 <p><a href="https://www.joomla.org">Joomla!</a> is Free Software released under the <a href="https://www.gnu.org/licenses/gpl-2.0.html">GNU General Public License</a>.</p>
-<p style="font-size:11px;opacity:0.7;margin-top:6px;">Protected by <a href="https://reportedip.de/" rel="noopener">reportedip.de</a></p>
+<p style="font-size:11px;opacity:0.7;margin-top:6px;">Protected by <a href="https://reportedip.de/" target="_blank" rel="noopener noreferrer">reportedip.de</a></p>
 </footer>
 
 </body>
