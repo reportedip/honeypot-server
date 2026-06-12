@@ -218,7 +218,7 @@ Besides the automatic reporting to reportedip.de, the honeypot can forward every
 - **Filters**: restrict a webhook to specific category IDs and/or analyzer names. Empty filters = all detections. When both filters are set, the webhook triggers when *either* one matches
 - **Test button**: every webhook can be verified from the admin panel with a test delivery (`X-ReportedIP-Event: test`). Test deliveries use the loopback IP `127.0.0.1`, so abuse databases reject them instead of storing a real report
 - Delivery status, timestamp, and consecutive failure count are shown per webhook
-- **Quick presets** in the admin form pre-fill the configuration for AbuseIPDB, Slack, Discord, and generic JSON
+- **Quick presets** in the admin form fill in URL, method, headers, and body template for AbuseIPDB, Slack, Discord, and generic JSON — just add your API key afterwards
 
 ### Body Formats
 
@@ -256,12 +256,14 @@ Note: AbuseIPDB accepts a report for the same IP only once every 15 minutes per 
 
 | Header | Value |
 |---|---|
-| `Content-Type` | `application/json` |
+| `Content-Type` | `application/json` (format `json`), `application/x-www-form-urlencoded` (format `form`); for `custom` it is derived from the rendered body and can be overridden via custom headers |
 | `User-Agent` | `reportedip-honeypot-server/<version>` |
 | `X-ReportedIP-Event` | `detection` or `test` |
 | `X-ReportedIP-Signature` | `sha256=<HMAC>` — only when a secret is configured |
 
-### Payload
+Custom headers configured on the webhook override the defaults (e.g. a custom `Content-Type`).
+
+### JSON Payload (body format `json`)
 
 ```json
 {
@@ -269,7 +271,7 @@ Note: AbuseIPDB accepts a report for the same IP only once every 15 minutes per 
   "generated_at": "2026-06-12T14:00:00+00:00",
   "honeypot": {
     "name": "reportedip-honeypot-server",
-    "version": "1.2.0",
+    "version": "1.3.1",
     "host": "your-honeypot.example.com",
     "profile": "wordpress"
   },
