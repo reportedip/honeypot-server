@@ -29,20 +29,23 @@ $baseDir = __DIR__;
 $autoloader = $baseDir . '/vendor/autoload.php';
 if (file_exists($autoloader)) {
     require $autoloader;
-} else {
-    spl_autoload_register(static function (string $class) use ($baseDir): void {
-        $prefix = 'ReportedIp\\Honeypot\\';
-        $len = strlen($prefix);
-        if (strncmp($prefix, $class, $len) !== 0) {
-            return;
-        }
-        $relativeClass = substr($class, $len);
-        $file = $baseDir . '/src/' . str_replace('\\', '/', $relativeClass) . '.php';
-        if (file_exists($file)) {
-            require $file;
-        }
-    });
 }
+
+// PSR-4 fallback — always registered, even alongside Composer.
+// A stale Composer classmap (vendor/ is protected during self-updates)
+// would otherwise miss classes added in newer releases.
+spl_autoload_register(static function (string $class) use ($baseDir): void {
+    $prefix = 'ReportedIp\\Honeypot\\';
+    $len = strlen($prefix);
+    if (strncmp($prefix, $class, $len) !== 0) {
+        return;
+    }
+    $relativeClass = substr($class, $len);
+    $file = $baseDir . '/src/' . str_replace('\\', '/', $relativeClass) . '.php';
+    if (file_exists($file)) {
+        require $file;
+    }
+});
 
 use ReportedIp\Honeypot\Api\ReportClient;
 use ReportedIp\Honeypot\Api\ReportQueue;

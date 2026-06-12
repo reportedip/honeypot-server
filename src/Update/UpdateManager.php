@@ -170,6 +170,13 @@ final class UpdateManager
                 return $result;
             }
 
+            // 8b. Invalidate caches so replaced files take effect immediately —
+            // stale opcache entries would otherwise mix old and new code
+            clearstatcache(true);
+            if (function_exists('opcache_reset')) {
+                @opcache_reset();
+            }
+
             // 9. Verify
             $newVersion = trim((string) @file_get_contents($this->projectRoot . '/VERSION'));
             if ($newVersion !== $targetVersion) {

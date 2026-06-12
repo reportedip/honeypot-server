@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.1] - 2026-06-12
+
+### Fixed
+- HTTP 500 auf `/_hp_admin/webhooks` bei Installationen mit veraltetem Composer-Autoloader: `vendor/` ist beim Self-Update ein geschützter Pfad — eine dort liegende optimierte Classmap vom Stand vor 1.2.0 kennt die neuen Klassen (`WebhookRepository`, `WebhookDispatcher`, `Version`) nicht und lieferte "Class not found". Der PSR-4-Fallback-Autoloader in `public/index.php` und `cli.php` wird jetzt immer registriert, auch wenn `vendor/autoload.php` existiert
+- `UpdateManager`: nach dem Dateitausch werden `clearstatcache()` und `opcache_reset()` ausgeführt, damit ersetzte Dateien sofort wirken und kein Mix aus altem und neuem Code entsteht
+
 ## [1.2.0] - 2026-06-12
 
 ### Added

@@ -20,20 +20,22 @@ set_error_handler(static function (int $severity, string $message, string $file,
 $autoloader = __DIR__ . '/../vendor/autoload.php';
 if (file_exists($autoloader)) {
     require $autoloader;
-} else {
-    // Fallback: simple PSR-4 autoloader if Composer is not available
-    spl_autoload_register(static function (string $class): void {
-        $prefix = 'ReportedIp\\Honeypot\\';
-        if (!str_starts_with($class, $prefix)) {
-            return;
-        }
-
-        $file = __DIR__ . '/../src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
-        if (file_exists($file)) {
-            require $file;
-        }
-    });
 }
+
+// PSR-4 fallback — always registered, even alongside Composer.
+// A stale Composer classmap (vendor/ is protected during self-updates)
+// would otherwise miss classes added in newer releases.
+spl_autoload_register(static function (string $class): void {
+    $prefix = 'ReportedIp\\Honeypot\\';
+    if (!str_starts_with($class, $prefix)) {
+        return;
+    }
+
+    $file = __DIR__ . '/../src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+    if (file_exists($file)) {
+        require $file;
+    }
+});
 
 use ReportedIp\Honeypot\Core\{App, Config};
 
