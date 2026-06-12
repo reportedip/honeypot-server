@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.1] - 2026-06-12
+
+### Fixed
+- Webhooks-Seite: Beschreibungstext der "Payload Format"-Karte korrigiert — die Aussage "Every delivery is an HTTP POST with Content-Type: application/json" galt seit 1.3.0 nicht mehr (Methode, Header und Body-Format sind pro Webhook konfigurierbar)
+- Payload-Beispiel zeigt jetzt die tatsächliche Anwendungsversion (dynamisch via `Version::current()`) statt einer hartcodierten Versionsnummer
+- Quick Presets ersetzen jetzt auch eine bereits eingetragene Endpoint-URL (vorher wurde die URL nur in ein leeres Feld übernommen); das Generic-JSON-Preset lässt die URL unverändert
+
 ## [1.3.0] - 2026-06-12
 
 ### Added

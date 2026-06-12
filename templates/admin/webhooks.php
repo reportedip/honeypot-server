@@ -247,13 +247,16 @@ ob_start();
 <div class="rip-card">
     <div class="rip-card__header">Payload Format</div>
     <p style="font-size:var(--rip-font-size-base); color:var(--rip-gray-500); margin-bottom:10px;">
-        Every delivery is an HTTP POST with <span style="font-family:var(--rip-font-mono);">Content-Type: application/json</span>
-        and an <span style="font-family:var(--rip-font-mono);">X-ReportedIP-Event</span> header (<span style="font-family:var(--rip-font-mono);">detection</span> or <span style="font-family:var(--rip-font-mono);">test</span>).
+        Every delivery carries an <span style="font-family:var(--rip-font-mono);">X-ReportedIP-Event</span> header
+        (<span style="font-family:var(--rip-font-mono);">detection</span> or <span style="font-family:var(--rip-font-mono);">test</span>).
+        HTTP method, headers, and body depend on the configuration above &mdash; with the default format
+        <span style="font-family:var(--rip-font-mono);">JSON</span>, an HTTP POST with
+        <span style="font-family:var(--rip-font-mono);">Content-Type: application/json</span> and the following body is sent:
     </p>
     <pre style="background:var(--rip-bg-code); border:var(--rip-border); border-radius:var(--rip-radius-md); padding:14px; font-family:var(--rip-font-mono); font-size:var(--rip-font-size-sm); overflow-x:auto;">{
   "event": "detection",
   "generated_at": "2026-06-12T14:00:00+00:00",
-  "honeypot": { "name": "reportedip-honeypot-server", "version": "1.2.0", "host": "example.com", "profile": "wordpress" },
+  "honeypot": { "name": "reportedip-honeypot-server", "version": "<?= htmlspecialchars(\ReportedIp\Honeypot\Core\Version::current(), ENT_QUOTES, 'UTF-8') ?>", "host": "example.com", "profile": "wordpress" },
   "request": { "ip": "203.0.113.50", "method": "POST", "uri": "/wp-login.php", "user_agent": "..." },
   "detections": [
     {
@@ -309,7 +312,7 @@ ob_start();
             document.getElementById('wh-headers').value = p.headers;
             document.getElementById('wh-template').value = p.template;
             var urlField = document.getElementById('wh-url');
-            if (p.url !== '' && urlField.value === '') {
+            if (p.url !== '') {
                 urlField.value = p.url;
             }
         });
