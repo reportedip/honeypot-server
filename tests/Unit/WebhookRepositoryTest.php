@@ -48,6 +48,29 @@ final class WebhookRepositoryTest extends TestCase
         $this->t->assertEquals(1, (int) $webhook['enabled']);
     }
 
+    public function testAddStoresDeliveryFormatFields(): void
+    {
+        $id = $this->repo->add([
+            'name'          => 'AbuseIPDB',
+            'url'           => 'https://api.abuseipdb.com/api/v2/report',
+            'headers'       => "Key: my-api-key\nAccept: application/json",
+            'body_format'   => 'custom',
+            'body_template' => 'ip={{ip_url}}&categories={{abuseipdb_categories}}&comment={{comment_url}}',
+        ]);
+
+        $webhook = $this->repo->getById($id);
+        $this->t->assertEquals('custom', $webhook['body_format']);
+        $this->t->assertContains('Key: my-api-key', $webhook['headers']);
+        $this->t->assertContains('{{abuseipdb_categories}}', $webhook['body_template']);
+    }
+
+    public function testBodyFormatDefaultsToJson(): void
+    {
+        $id = $this->repo->add(['name' => 'A', 'url' => 'https://a.example.com/']);
+        $webhook = $this->repo->getById($id);
+        $this->t->assertEquals('json', $webhook['body_format']);
+    }
+
     public function testGetByIdReturnsNullForUnknown(): void
     {
         $this->t->assertNull($this->repo->getById(999));

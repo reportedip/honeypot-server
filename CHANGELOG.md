@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.0] - 2026-06-12
+
+### Added
+- Flexible Webhook-Delivery: HTTP-Methode (POST/PUT/PATCH/GET), eigene HTTP-Header (z. B. API-Keys) und Body-Format pro Webhook konfigurierbar — `json` (strukturiertes Payload), `form` (x-www-form-urlencoded) oder `custom` (frei definierbares Body-Template)
+- Template-Platzhalter für Body und URL: `{{ip}}`, `{{categories}}`, `{{abuseipdb_categories}}`, `{{comment}}`, `{{severity}}`, `{{analyzers}}`, `{{uri}}`, `{{method}}`, `{{user_agent}}`, `{{host}}`, `{{timestamp}}`, `{{version}}`, `{{event}}` — jeweils auch als `_url`- (URL-encoded) und `_json`-Variante (JSON-escaped)
+- AbuseIPDB-Unterstützung: `{{abuseipdb_categories}}` mappt reportedip.de-Kategorien automatisch auf AbuseIPDB-IDs (1–23 identisch, CMS-Kategorien 24–58 auf nächstliegende Äquivalente)
+- Quick-Presets im Admin-Formular: AbuseIPDB, Slack, Discord, Generic JSON
+- Test-Deliveries nutzen die Loopback-IP 127.0.0.1, damit externe Abuse-Datenbanken Testreports ablehnen statt sie zu speichern
+- Schema-Migration: neue Spalten `method`, `headers`, `body_format`, `body_template` in `honeypot_webhooks` (automatisch via `ensureColumns`)
+- 11 neue Tests (Kategorie-Mapping, Template-Rendering, Header-Parsing, Feld-Aggregation)
+
 ## [1.2.1] - 2026-06-12
 
 ### Fixed

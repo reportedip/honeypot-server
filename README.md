@@ -24,7 +24,7 @@ Zero external Composer dependencies. Runs on vanilla PHP 8.2+. Uses SQLite for p
 - **CMS Emulation** — Realistic WordPress, Drupal, and Joomla front-ends with login pages, admin panels, REST APIs, RSS feeds, sitemaps, and vulnerability paths
 - **36 Threat Analyzers** — SQL injection, XSS, path traversal, brute force, credential stuffing, SSRF, XML-RPC abuse, plugin exploits, config file access, and more
 - **Automatic Reporting** — Detected threats are queued and batch-reported to the reportedip.de API with rate limiting and exponential backoff
-- **Webhooks** — Forward detections in real time to your own logging/SIEM systems via JSON webhooks, filtered by category or analyzer, with optional HMAC-SHA256 signatures
+- **Webhooks** — Forward detections in real time to your own logging/SIEM systems or third-party abuse databases (AbuseIPDB, Slack, Discord, custom APIs) with configurable methods, headers, body templates, and optional HMAC-SHA256 signatures
 - **Admin Dashboard** — Web-based panel for monitoring attacks, viewing statistics, managing whitelists, and generating AI content
 - **AI Content Generation** — Optional OpenAI integration to generate realistic blog posts for the fake CMS (AJAX-based, one post at a time to avoid timeouts)
 - **Bot Detection** — Classifies visitors as good bots, bad bots, AI agents, hackers, or humans
@@ -208,15 +208,49 @@ Access the admin panel at your configured path (default: `/_hp_admin`).
 
 ## Webhooks
 
-Besides the automatic reporting to reportedip.de, the honeypot can forward every detection to your own systems (SIEM, log management, chat alerts, custom dashboards) in real time. Webhooks are managed in the admin panel under **Webhooks**.
+Besides the automatic reporting to reportedip.de, the honeypot can forward every detection to your own systems (SIEM, log management, chat alerts, custom dashboards) or third-party abuse databases like **AbuseIPDB** in real time. Webhooks are managed in the admin panel under **Webhooks**.
 
 ### How It Works
 
-- Each webhook is an HTTP(S) endpoint that receives a JSON `POST` for every matching detection
+- Each webhook is an HTTP(S) endpoint that receives a request for every matching detection
+- HTTP method (`POST`/`PUT`/`PATCH`/`GET`), custom headers (e.g. API keys), and body format are configurable per endpoint
 - Delivery happens after the trap response has been sent to the attacker, so webhooks never slow down the honeypot
 - **Filters**: restrict a webhook to specific category IDs and/or analyzer names. Empty filters = all detections. When both filters are set, the webhook triggers when *either* one matches
-- **Test button**: every webhook can be verified from the admin panel with a test delivery (`X-ReportedIP-Event: test`)
+- **Test button**: every webhook can be verified from the admin panel with a test delivery (`X-ReportedIP-Event: test`). Test deliveries use the loopback IP `127.0.0.1`, so abuse databases reject them instead of storing a real report
 - Delivery status, timestamp, and consecutive failure count are shown per webhook
+- **Quick presets** in the admin form pre-fill the configuration for AbuseIPDB, Slack, Discord, and generic JSON
+
+### Body Formats
+
+| Format | Description |
+|---|---|
+| `json` | Full structured detection payload (see below) — default |
+| `form` | Flat key/value fields as `application/x-www-form-urlencoded` |
+| `custom` | Free-form body template with placeholders — adapts to any third-party API |
+
+### Template Placeholders
+
+Available in custom body templates **and** in the endpoint URL (for GET-style APIs):
+
+`{{ip}}`, `{{categories}}`, `{{abuseipdb_categories}}`, `{{comment}}`, `{{severity}}`, `{{analyzers}}`, `{{uri}}`, `{{method}}`, `{{user_agent}}`, `{{host}}`, `{{timestamp}}`, `{{version}}`, `{{event}}`
+
+Each placeholder also exists as `{{name_url}}` (URL-encoded) and `{{name_json}}` (JSON-escaped). Multiple detections in one request are aggregated: categories are merged, severity is the maximum, comments are joined.
+
+`{{abuseipdb_categories}}` automatically translates reportedip.de category IDs to AbuseIPDB category IDs (IDs 1–23 are identical on both platforms; the CMS-specific IDs 24–58 map to their closest equivalent, e.g. *WP Login Brute Force* → *Brute-Force* + *Web App Attack*).
+
+### Example: Reporting to AbuseIPDB
+
+Use the **AbuseIPDB preset** in the admin form, or configure manually:
+
+| Field | Value |
+|---|---|
+| URL | `https://api.abuseipdb.com/api/v2/report` |
+| Method | `POST` |
+| Body format | `custom` |
+| Headers | `Key: YOUR_ABUSEIPDB_API_KEY`<br>`Accept: application/json` |
+| Body template | `ip={{ip_url}}&categories={{abuseipdb_categories}}&comment={{comment_url}}` |
+
+Note: AbuseIPDB accepts a report for the same IP only once every 15 minutes per reporter. The honeypot's built-in category cooldown (15 minutes by default) keeps duplicate submissions to a minimum; rejected duplicates show up as a delivery failure (`HTTP 429`) in the webhook status.
 
 ### Request Headers
 

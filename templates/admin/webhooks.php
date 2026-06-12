@@ -21,6 +21,11 @@ $selectedAnalyzers = $isEdit && trim((string) $edit_webhook['analyzers']) !== ''
     ? array_map('trim', explode(',', (string) $edit_webhook['analyzers']))
     : [];
 
+$currentMethod = $isEdit ? strtoupper((string) ($edit_webhook['method'] ?? 'POST')) : 'POST';
+$currentFormat = $isEdit ? (string) ($edit_webhook['body_format'] ?? 'json') : 'json';
+$currentHeaders = $isEdit ? (string) ($edit_webhook['headers'] ?? '') : '';
+$currentTemplate = $isEdit ? (string) ($edit_webhook['body_template'] ?? '') : '';
+
 ob_start();
 ?>
 
@@ -28,9 +33,11 @@ ob_start();
 <div class="rip-card">
     <div class="rip-card__header">External Report Targets</div>
     <p style="font-size:var(--rip-font-size-base); color:var(--rip-gray-500); margin-bottom:14px;">
-        Forward detections to your own logging or SIEM systems. Each endpoint receives a JSON POST
-        for every matching detection. Leave both filters empty to receive all detections; with filters
-        set, the webhook triggers when the category <em>or</em> the analyzer matches.
+        Forward detections to your own logging/SIEM systems or third-party abuse databases
+        (e.g. AbuseIPDB) in real time. Body format, HTTP method, and headers are configurable
+        per endpoint &mdash; use the presets below for common targets. Leave both filters empty
+        to receive all detections; with filters set, the webhook triggers when the category
+        <em>or</em> the analyzer matches.
     </p>
 
     <?php if (empty($webhooks)): ?>
@@ -60,7 +67,10 @@ ob_start();
                         $whFailures = (int) $webhook['failure_count'];
                     ?>
                     <tr>
-                        <td><strong><?= htmlspecialchars((string) $webhook['name'], ENT_QUOTES, 'UTF-8') ?></strong></td>
+                        <td>
+                            <strong><?= htmlspecialchars((string) $webhook['name'], ENT_QUOTES, 'UTF-8') ?></strong><br>
+                            <span class="rip-badge rip-badge--method"><?= htmlspecialchars(strtoupper((string) ($webhook['method'] ?? 'POST')), ENT_QUOTES, 'UTF-8') ?> &middot; <?= htmlspecialchars((string) ($webhook['body_format'] ?? 'json'), ENT_QUOTES, 'UTF-8') ?></span>
+                        </td>
                         <td style="max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="<?= htmlspecialchars((string) $webhook['url'], ENT_QUOTES, 'UTF-8') ?>">
                             <span style="font-family:var(--rip-font-mono); font-size:var(--rip-font-size-sm);"><?= htmlspecialchars((string) $webhook['url'], ENT_QUOTES, 'UTF-8') ?></span>
                         </td>
@@ -133,10 +143,57 @@ ob_start();
             </div>
             <div class="rip-form-group">
                 <label class="rip-label" for="wh-url">Endpoint URL</label>
-                <input type="url" id="wh-url" name="url" class="rip-input" required
+                <input type="text" id="wh-url" name="url" class="rip-input" required
                        value="<?= $isEdit ? htmlspecialchars((string) $edit_webhook['url'], ENT_QUOTES, 'UTF-8') : '' ?>"
                        placeholder="https://logs.example.com/honeypot-webhook">
-                <div class="rip-help-text">Detections are sent as JSON via HTTP POST.</div>
+                <div class="rip-help-text">Placeholders like <span style="font-family:var(--rip-font-mono);">{{ip_url}}</span> are allowed in the URL (useful for GET-style APIs).</div>
+            </div>
+        </div>
+
+        <div class="rip-form-group">
+            <label class="rip-label">Quick Presets</label>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" class="rip-button rip-button--secondary rip-button--sm" data-preset="generic">Generic JSON</button>
+                <button type="button" class="rip-button rip-button--secondary rip-button--sm" data-preset="abuseipdb">AbuseIPDB</button>
+                <button type="button" class="rip-button rip-button--secondary rip-button--sm" data-preset="slack">Slack</button>
+                <button type="button" class="rip-button rip-button--secondary rip-button--sm" data-preset="discord">Discord</button>
+            </div>
+            <div class="rip-help-text">Presets fill in URL, method, headers, and body template — adjust the API key afterwards.</div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+            <div class="rip-form-group">
+                <label class="rip-label" for="wh-method">HTTP Method</label>
+                <select id="wh-method" name="method" class="rip-select">
+                    <?php foreach (['POST', 'PUT', 'PATCH', 'GET'] as $m): ?>
+                        <option value="<?= $m ?>" <?= $currentMethod === $m ? 'selected' : '' ?>><?= $m ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="rip-form-group">
+                <label class="rip-label" for="wh-format">Body Format</label>
+                <select id="wh-format" name="body_format" class="rip-select">
+                    <option value="json" <?= $currentFormat === 'json' ? 'selected' : '' ?>>JSON (full detection payload)</option>
+                    <option value="form" <?= $currentFormat === 'form' ? 'selected' : '' ?>>Form (flat key/value fields)</option>
+                    <option value="custom" <?= $currentFormat === 'custom' ? 'selected' : '' ?>>Custom (body template with placeholders)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="rip-form-group">
+            <label class="rip-label" for="wh-headers">Custom HTTP Headers (optional, one per line)</label>
+            <textarea id="wh-headers" name="headers" class="rip-textarea" rows="3"
+                      placeholder="Key: YOUR_API_KEY&#10;Accept: application/json"><?= htmlspecialchars($currentHeaders, ENT_QUOTES, 'UTF-8') ?></textarea>
+            <div class="rip-help-text">Format <span style="font-family:var(--rip-font-mono);">Name: Value</span>. Custom headers override the defaults (e.g. Content-Type).</div>
+        </div>
+
+        <div class="rip-form-group" id="wh-template-group">
+            <label class="rip-label" for="wh-template">Body Template (used with format "Custom")</label>
+            <textarea id="wh-template" name="body_template" class="rip-textarea" rows="3"
+                      placeholder="ip={{ip_url}}&amp;categories={{abuseipdb_categories}}&amp;comment={{comment_url}}"><?= htmlspecialchars($currentTemplate, ENT_QUOTES, 'UTF-8') ?></textarea>
+            <div class="rip-help-text">
+                Placeholders: <span style="font-family:var(--rip-font-mono);">{{ip}} {{categories}} {{abuseipdb_categories}} {{comment}} {{severity}} {{analyzers}} {{uri}} {{method}} {{user_agent}} {{host}} {{timestamp}} {{version}} {{event}}</span>
+                &mdash; each also as <span style="font-family:var(--rip-font-mono);">{{name_url}}</span> (URL-encoded) and <span style="font-family:var(--rip-font-mono);">{{name_json}}</span> (JSON-escaped).
             </div>
         </div>
 
@@ -209,6 +266,56 @@ ob_start();
   ]
 }</pre>
 </div>
+
+<script>
+(function () {
+    var presets = {
+        generic: {
+            method: 'POST',
+            format: 'json',
+            headers: '',
+            template: '',
+            url: ''
+        },
+        abuseipdb: {
+            method: 'POST',
+            format: 'custom',
+            headers: 'Key: YOUR_ABUSEIPDB_API_KEY\nAccept: application/json',
+            template: 'ip={{ip_url}}&categories={{abuseipdb_categories}}&comment={{comment_url}}',
+            url: 'https://api.abuseipdb.com/api/v2/report'
+        },
+        slack: {
+            method: 'POST',
+            format: 'custom',
+            headers: '',
+            template: '{"text":"Honeypot detection from {{ip_json}} (severity {{severity}}): {{comment_json}}"}',
+            url: 'https://hooks.slack.com/services/YOUR/WEBHOOK/PATH'
+        },
+        discord: {
+            method: 'POST',
+            format: 'custom',
+            headers: '',
+            template: '{"content":"Honeypot detection from {{ip_json}} (severity {{severity}}): {{comment_json}}"}',
+            url: 'https://discord.com/api/webhooks/YOUR/WEBHOOK-PATH'
+        }
+    };
+
+    document.querySelectorAll('[data-preset]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var p = presets[btn.getAttribute('data-preset')];
+            if (!p) { return; }
+            document.getElementById('wh-method').value = p.method;
+            document.getElementById('wh-format').value = p.format;
+            document.getElementById('wh-headers').value = p.headers;
+            document.getElementById('wh-template').value = p.template;
+            var urlField = document.getElementById('wh-url');
+            if (p.url !== '' && urlField.value === '') {
+                urlField.value = p.url;
+            }
+        });
+    });
+})();
+</script>
 
 <?php
 $content = ob_get_clean();

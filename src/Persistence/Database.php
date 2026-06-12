@@ -142,6 +142,10 @@ final class Database
                 categories TEXT DEFAULT \'\',
                 analyzers TEXT DEFAULT \'\',
                 enabled INTEGER DEFAULT 1,
+                method TEXT DEFAULT \'POST\',
+                headers TEXT DEFAULT \'\',
+                body_format TEXT DEFAULT \'json\',
+                body_template TEXT DEFAULT \'\',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 last_triggered_at DATETIME,
                 last_status TEXT DEFAULT \'\',
@@ -149,6 +153,13 @@ final class Database
             )
         ');
         $pdo->exec('CREATE INDEX IF NOT EXISTS idx_webhooks_enabled ON honeypot_webhooks(enabled)');
+
+        $this->ensureColumns('honeypot_webhooks', [
+            'method'        => "TEXT DEFAULT 'POST'",
+            'headers'       => "TEXT DEFAULT ''",
+            'body_format'   => "TEXT DEFAULT 'json'",
+            'body_template' => "TEXT DEFAULT ''",
+        ]);
     }
 
     /**

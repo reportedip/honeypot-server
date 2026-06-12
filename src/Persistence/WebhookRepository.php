@@ -24,12 +24,16 @@ final class WebhookRepository
     public function add(array $data): int
     {
         return $this->db->insert('honeypot_webhooks', [
-            'name'       => (string) ($data['name'] ?? ''),
-            'url'        => (string) ($data['url'] ?? ''),
-            'secret'     => (string) ($data['secret'] ?? ''),
-            'categories' => (string) ($data['categories'] ?? ''),
-            'analyzers'  => (string) ($data['analyzers'] ?? ''),
-            'enabled'    => (int) ($data['enabled'] ?? 1),
+            'name'          => (string) ($data['name'] ?? ''),
+            'url'           => (string) ($data['url'] ?? ''),
+            'secret'        => (string) ($data['secret'] ?? ''),
+            'categories'    => (string) ($data['categories'] ?? ''),
+            'analyzers'     => (string) ($data['analyzers'] ?? ''),
+            'enabled'       => (int) ($data['enabled'] ?? 1),
+            'method'        => (string) ($data['method'] ?? 'POST'),
+            'headers'       => (string) ($data['headers'] ?? ''),
+            'body_format'   => (string) ($data['body_format'] ?? 'json'),
+            'body_template' => (string) ($data['body_template'] ?? ''),
         ]);
     }
 
@@ -42,7 +46,8 @@ final class WebhookRepository
     {
         $this->db->query(
             'UPDATE honeypot_webhooks
-                SET name = ?, url = ?, secret = ?, categories = ?, analyzers = ?
+                SET name = ?, url = ?, secret = ?, categories = ?, analyzers = ?,
+                    method = ?, headers = ?, body_format = ?, body_template = ?
               WHERE id = ?',
             [
                 (string) ($data['name'] ?? ''),
@@ -50,6 +55,10 @@ final class WebhookRepository
                 (string) ($data['secret'] ?? ''),
                 (string) ($data['categories'] ?? ''),
                 (string) ($data['analyzers'] ?? ''),
+                (string) ($data['method'] ?? 'POST'),
+                (string) ($data['headers'] ?? ''),
+                (string) ($data['body_format'] ?? 'json'),
+                (string) ($data['body_template'] ?? ''),
                 $id,
             ]
         );

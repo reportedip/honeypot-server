@@ -858,8 +858,11 @@ final class AdminController
         $url = trim((string) ($postData['url'] ?? ''));
         $secret = trim((string) ($postData['secret'] ?? ''));
 
-        $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
-        if ($name === '' || filter_var($url, FILTER_VALIDATE_URL) === false
+        // Platzhalter wie {{ip_url}} sind in der URL erlaubt — für die
+        // Validierung durch einen Dummy-Wert ersetzen
+        $urlForValidation = (string) preg_replace('/\{\{[a-z0-9_]+\}\}/i', 'x', $url);
+        $scheme = strtolower((string) parse_url($urlForValidation, PHP_URL_SCHEME));
+        if ($name === '' || filter_var($urlForValidation, FILTER_VALIDATE_URL) === false
             || !in_array($scheme, ['http', 'https'], true)) {
             return null;
         }
@@ -882,12 +885,32 @@ final class AdminController
         }
         sort($analyzers);
 
+        $method = strtoupper(trim((string) ($postData['method'] ?? 'POST')));
+        if (!in_array($method, ['POST', 'PUT', 'PATCH', 'GET'], true)) {
+            $method = 'POST';
+        }
+
+        $bodyFormat = (string) ($postData['body_format'] ?? 'json');
+        if (!in_array($bodyFormat, ['json', 'form', 'custom'], true)) {
+            $bodyFormat = 'json';
+        }
+
+        // Nur valide "Name: Value"-Zeilen übernehmen (CRLF-sicher)
+        $headers = implode(
+            "\n",
+            \ReportedIp\Honeypot\Api\WebhookDispatcher::parseHeaderLines((string) ($postData['headers'] ?? ''))
+        );
+
         return [
-            'name'       => $name,
-            'url'        => $url,
-            'secret'     => $secret,
-            'categories' => implode(',', $categories),
-            'analyzers'  => implode(',', $analyzers),
+            'name'          => $name,
+            'url'           => $url,
+            'secret'        => $secret,
+            'categories'    => implode(',', $categories),
+            'analyzers'     => implode(',', $analyzers),
+            'method'        => $method,
+            'headers'       => $headers,
+            'body_format'   => $bodyFormat,
+            'body_template' => (string) ($postData['body_template'] ?? ''),
         ];
     }
 

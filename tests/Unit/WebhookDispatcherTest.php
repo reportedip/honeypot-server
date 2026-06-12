@@ -119,6 +119,92 @@ final class WebhookDispatcherTest extends TestCase
         $this->t->assertEquals($expected, WebhookDispatcher::sign($body, $secret));
     }
 
+    // --- AbuseIPDB-Kategorie-Mapping ---
+
+    public function testAbuseIpDbMappingPassesThroughSharedCategories(): void
+    {
+        // 1-23 sind bei reportedip.de und AbuseIPDB identisch
+        $this->t->assertEquals([16, 18], WebhookDispatcher::mapCategoriesToAbuseIpDb([16, 18]));
+    }
+
+    public function testAbuseIpDbMappingTranslatesCmsCategories(): void
+    {
+        // 31 WP Login Brute Force -> 18 Brute-Force + 21 Web App Attack
+        $this->t->assertEquals([18, 21], WebhookDispatcher::mapCategoriesToAbuseIpDb([31]));
+        // 44 XSS -> 21 Web App Attack
+        $this->t->assertEquals([21], WebhookDispatcher::mapCategoriesToAbuseIpDb([44]));
+        // 40 Form Spam -> 10 Web Spam
+        $this->t->assertEquals([10], WebhookDispatcher::mapCategoriesToAbuseIpDb([40]));
+    }
+
+    public function testAbuseIpDbMappingDeduplicatesAndSorts(): void
+    {
+        // 31 -> 18,21 / 21 -> 21 / 16 -> 16: dedupliziert und sortiert
+        $this->t->assertEquals([16, 18, 21], WebhookDispatcher::mapCategoriesToAbuseIpDb([31, 21, 16]));
+    }
+
+    public function testAbuseIpDbMappingFallsBackToWebAppAttack(): void
+    {
+        $this->t->assertEquals([21], WebhookDispatcher::mapCategoriesToAbuseIpDb([999]));
+    }
+
+    // --- Flache Felder + Template-Rendering ---
+
+    public function testBuildFieldsAggregatesMultipleDetections(): void
+    {
+        $request = $this->createRequest([
+            'uri'    => '/wp-login.php',
+            'method' => 'POST',
+            'ip'     => '203.0.113.50',
+        ]);
+        $request->setIp('203.0.113.50');
+
+        $results = [
+            new DetectionResult([16], 'SQLi found', 85, 'SqlInjection'),
+            new DetectionResult([18, 31], 'Brute force', 60, 'BruteForce'),
+        ];
+
+        $fields = $this->dispatcher->buildFields($request, $results);
+
+        $this->t->assertEquals('203.0.113.50', $fields['ip']);
+        $this->t->assertEquals('16,18,31', $fields['categories']);
+        $this->t->assertEquals('16,18,21', $fields['abuseipdb_categories']);
+        $this->t->assertEquals('85', $fields['severity']);
+        $this->t->assertEquals('BruteForce,SqlInjection', $fields['analyzers']);
+        $this->t->assertContains('[SqlInjection] SQLi found', $fields['comment']);
+        $this->t->assertContains('[BruteForce] Brute force', $fields['comment']);
+    }
+
+    public function testRenderTemplateReplacesPlaceholders(): void
+    {
+        $fields = ['ip' => '203.0.113.50', 'comment' => 'a b&c'];
+        $rendered = WebhookDispatcher::renderTemplate(
+            'ip={{ip_url}}&comment={{comment_url}} raw={{ip}} json={{comment_json}}',
+            $fields
+        );
+        $this->t->assertEquals('ip=203.0.113.50&comment=a%20b%26c raw=203.0.113.50 json=a b&c', $rendered);
+    }
+
+    public function testRenderTemplateLeavesUnknownPlaceholders(): void
+    {
+        $rendered = WebhookDispatcher::renderTemplate('x={{unknown}}', ['ip' => '1.2.3.4']);
+        $this->t->assertEquals('x={{unknown}}', $rendered);
+    }
+
+    // --- Custom-Header-Parsing ---
+
+    public function testParseHeaderLines(): void
+    {
+        $headers = WebhookDispatcher::parseHeaderLines("Key: abc123\nAccept: application/json\n\ninvalid-line\nX-Foo:bar");
+        $this->t->assertEquals(['Key: abc123', 'Accept: application/json', 'X-Foo: bar'], $headers);
+    }
+
+    public function testParseHeaderLinesStripsCrlfInjection(): void
+    {
+        $headers = WebhookDispatcher::parseHeaderLines("Key: abc\r\nEvil: injected");
+        $this->t->assertEquals(['Key: abc', 'Evil: injected'], $headers);
+    }
+
     // --- Dispatch (ohne erreichbare URL: Fehler werden gezählt, nichts wirft) ---
 
     public function testDispatchSkipsNonMatchingWebhooks(): void
