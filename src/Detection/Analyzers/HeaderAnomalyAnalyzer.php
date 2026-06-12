@@ -59,7 +59,7 @@ final class HeaderAnomalyAnalyzer implements AnalyzerInterface
         // Check for X-Forwarded-For manipulation
         $xff = $request->getHeader('X-Forwarded-For');
         if ($xff !== null) {
-            if (preg_match('/127\.0\.0\.1|localhost|::1|0\.0\.0\.0/', $xff)) {
+            if ($this->containsLoopbackEntry($xff)) {
                 $findings[] = 'Suspicious X-Forwarded-For with loopback address';
                 $maxScore = max($maxScore, 45);
             }
@@ -113,5 +113,29 @@ final class HeaderAnomalyAnalyzer implements AnalyzerInterface
         );
 
         return new DetectionResult([15, 21], $comment, $maxScore, $this->getName());
+    }
+
+    /**
+     * Check if an X-Forwarded-For chain contains a loopback/unspecified entry.
+     *
+     * Vergleicht jeden Eintrag exakt, damit IPv6-Adressen wie
+     * 2a06:98c0:3600::103 (enthalten "::1" als Substring) nicht
+     * fälschlich als Loopback erkannt werden.
+     */
+    private function containsLoopbackEntry(string $xff): bool
+    {
+        $suspicious = ['localhost', '::1', '0.0.0.0', '::'];
+
+        foreach (explode(',', $xff) as $entry) {
+            $entry = strtolower(trim($entry));
+            // Optionalen Port abschneiden (z. B. "127.0.0.1:8080")
+            $entry = preg_replace('/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/', '$1', $entry) ?? $entry;
+
+            if (in_array($entry, $suspicious, true) || str_starts_with($entry, '127.')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

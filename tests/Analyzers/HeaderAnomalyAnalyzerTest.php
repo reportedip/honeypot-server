@@ -86,7 +86,35 @@ final class HeaderAnomalyAnalyzerTest extends TestCase
         $this->t->assertNotNull($result);
     }
 
+    public function testDetectsIpv6LoopbackInXff(): void
+    {
+        $request = $this->createRequest([
+            'uri'     => '/page',
+            'headers' => [
+                'Host'            => 'example.com',
+                'X-Forwarded-For' => '::1, 93.184.216.34',
+            ],
+        ]);
+        $result = $this->analyzer->analyze($request);
+        $this->t->assertNotNull($result);
+        $this->t->assertContains('loopback', $result->getComment());
+    }
+
     // --- Negative tests ---
+
+    public function testIgnoresIpv6XffContainingColonColonOnePrefix(): void
+    {
+        // 2a06:98c0:3600::103 enthält "::1" als Substring, ist aber kein Loopback
+        $request = $this->createRequest([
+            'uri'     => '/page',
+            'headers' => [
+                'Host'            => 'example.com',
+                'X-Forwarded-For' => '2a06:98c0:3600::103',
+            ],
+        ]);
+        $result = $this->analyzer->analyze($request);
+        $this->t->assertNull($result);
+    }
 
     public function testIgnoresNormalHeaders(): void
     {

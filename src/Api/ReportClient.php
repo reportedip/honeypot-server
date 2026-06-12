@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ReportedIp\Honeypot\Api;
 
 use ReportedIp\Honeypot\Core\Config;
+use ReportedIp\Honeypot\Core\Version;
 
 /**
  * HTTP client for the reportedip.de API.
@@ -14,7 +15,6 @@ use ReportedIp\Honeypot\Core\Config;
  */
 final class ReportClient
 {
-    private const USER_AGENT = 'reportedip-honeypot-server/1.0.0';
     private const BASE_BACKOFF_SECONDS = 5;
     private const MAX_BACKOFF_SECONDS = 300;
 
@@ -29,9 +29,20 @@ final class ReportClient
     /** @var string|null Last error message for debugging */
     private ?string $lastError = null;
 
+    /** @var int|null HTTP status code of the most recent API response */
+    private ?int $lastHttpCode = null;
+
     public function __construct(Config $config)
     {
         $this->config = $config;
+    }
+
+    /**
+     * Get the User-Agent string carrying the current application version.
+     */
+    public static function getUserAgent(): string
+    {
+        return 'reportedip-honeypot-server/' . Version::current();
     }
 
     /**
@@ -40,6 +51,25 @@ final class ReportClient
     public function getLastError(): ?string
     {
         return $this->lastError;
+    }
+
+    /**
+     * Check if the most recent report() call was permanently rejected
+     * by the API (e.g. whitelisted IP). Such entries must not be retried.
+     */
+    public function wasPermanentlyRejected(): bool
+    {
+        return $this->lastHttpCode !== null
+            && self::isPermanentRejectionCode($this->lastHttpCode);
+    }
+
+    /**
+     * 4xx responses (except 429 rate limiting) are permanent rejections —
+     * retrying the same payload will never succeed.
+     */
+    public static function isPermanentRejectionCode(int $httpCode): bool
+    {
+        return $httpCode >= 400 && $httpCode < 500 && $httpCode !== 429;
     }
 
     /**
@@ -53,6 +83,7 @@ final class ReportClient
     public function report(string $ip, string $categories, string $comment): bool
     {
         $this->lastError = null;
+        $this->lastHttpCode = null;
 
         if ($this->isRateLimited()) {
             $this->lastError = 'Local rate limit exceeded';
@@ -97,7 +128,8 @@ final class ReportClient
             CURLOPT_HTTPHEADER     => [
                 'X-Key: ' . $apiKey,
                 'Content-Type: application/x-www-form-urlencoded',
-                'User-Agent: ' . self::USER_AGENT,
+                'User-Agent: ' . self::getUserAgent(),
+                'X-Honeypot-Version: ' . Version::current(),
             ],
         ];
 
@@ -114,6 +146,7 @@ final class ReportClient
         $curlError = curl_error($ch);
         curl_close($ch);
 
+        $this->lastHttpCode = $httpCode;
         $this->trackRequest();
 
         // Handle cURL errors

@@ -97,6 +97,34 @@ final class IpResolverTest extends TestCase
         $this->t->assertEquals('0.0.0.0', $ip);
     }
 
+    public function testCfConnectingIpFromCloudflareIpv6Range(): void
+    {
+        $config = new Config([]);
+        $resolver = new IpResolver($config);
+
+        // 2a06:98c0:3600::103 liegt im Cloudflare-IPv6-Range 2a06:98c0::/29
+        $request = $this->createRequest([
+            'ip'      => '2a06:98c0:3600::103',
+            'headers' => ['Cf-Connecting-Ip' => '85.10.20.30'],
+        ]);
+        $ip = $resolver->resolve($request);
+        $this->t->assertEquals('85.10.20.30', $ip);
+    }
+
+    public function testXForwardedForFromCloudflareIpv6Range(): void
+    {
+        $config = new Config([]);
+        $resolver = new IpResolver($config);
+
+        // 2606:4700::1234 liegt im Cloudflare-IPv6-Range 2606:4700::/32
+        $request = $this->createRequest([
+            'ip'      => '2606:4700::1234',
+            'headers' => ['X-Forwarded-For' => '93.184.216.34'],
+        ]);
+        $ip = $resolver->resolve($request);
+        $this->t->assertEquals('93.184.216.34', $ip);
+    }
+
     public function testCustomTrustedProxies(): void
     {
         $config = new Config(['trusted_proxies' => ['10.0.0.0/8']]);

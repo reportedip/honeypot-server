@@ -48,4 +48,40 @@ final class ReportClientTest extends TestCase
         // Default rate_limit_per_ip should be 60, so not rate limited initially
         $this->t->assertFalse($client->isRateLimited());
     }
+
+    public function testPermanentRejectionCodes(): void
+    {
+        // 4xx (außer 429) = permanente Ablehnung, kein Retry sinnvoll
+        $this->t->assertTrue(ReportClient::isPermanentRejectionCode(400));
+        $this->t->assertTrue(ReportClient::isPermanentRejectionCode(403));
+        $this->t->assertTrue(ReportClient::isPermanentRejectionCode(422));
+        // 429 = Rate Limit, temporär
+        $this->t->assertFalse(ReportClient::isPermanentRejectionCode(429));
+        // 5xx = Serverfehler, temporär
+        $this->t->assertFalse(ReportClient::isPermanentRejectionCode(500));
+        $this->t->assertFalse(ReportClient::isPermanentRejectionCode(503));
+        // Erfolg / Verbindungsfehler
+        $this->t->assertFalse(ReportClient::isPermanentRejectionCode(200));
+        $this->t->assertFalse(ReportClient::isPermanentRejectionCode(0));
+    }
+
+    public function testUserAgentContainsCurrentVersion(): void
+    {
+        $versionFile = dirname(__DIR__, 2) . '/VERSION';
+        $version = trim((string) file_get_contents($versionFile));
+
+        $userAgent = ReportClient::getUserAgent();
+        $this->t->assertEquals('reportedip-honeypot-server/' . $version, $userAgent);
+        // Hartcodierte Versionen dürfen nicht mehr vorkommen
+        $this->t->assertTrue($version !== '', 'VERSION file must not be empty');
+    }
+
+    public function testWasPermanentlyRejectedFalseWithoutRequest(): void
+    {
+        $config = new Config(['api_key' => '', 'report_rate_limit' => 60]);
+        $client = new ReportClient($config);
+        // Lokaler Fehler (kein API-Key) ist keine permanente API-Ablehnung
+        $client->report('1.2.3.4', '16', 'test');
+        $this->t->assertFalse($client->wasPermanentlyRejected());
+    }
 }

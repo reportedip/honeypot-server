@@ -67,9 +67,19 @@ final class ReportQueue
                 $this->markSent([(int) $entry['id']]);
                 $result['sent']++;
             } else {
-                $result['failed']++;
                 $error = $this->client->getLastError();
                 $this->markFailure((int) $entry['id'], $error);
+
+                if ($this->client->wasPermanentlyRejected()) {
+                    // 4xx (z. B. whitelisted IP): Retry kann nie gelingen —
+                    // aus der Queue nehmen, sonst blockiert der Eintrag dauerhaft
+                    // den Batch (ORDER BY timestamp ASC).
+                    $this->markRejected((int) $entry['id']);
+                    $result['skipped']++;
+                } else {
+                    $result['failed']++;
+                }
+
                 if ($error !== null) {
                     $errorMsg = sprintf('#%d [%s] %s', $entry['id'], $entry['ip'], $error);
                     $result['errors'][] = $errorMsg;
@@ -106,6 +116,16 @@ final class ReportQueue
             sprintf('UPDATE honeypot_logs SET sent = 1 WHERE id IN (%s)', $placeholders),
             $ids
         );
+    }
+
+    /**
+     * Mark an entry as permanently rejected (sent = 2, same state as
+     * whitelisted/skipped entries) so it leaves the queue but stays
+     * distinguishable from successfully sent reports.
+     */
+    private function markRejected(int $id): void
+    {
+        $this->db->query('UPDATE honeypot_logs SET sent = 2 WHERE id = ?', [$id]);
     }
 
     /**

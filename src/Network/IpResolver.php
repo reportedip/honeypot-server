@@ -15,8 +15,9 @@ use ReportedIp\Honeypot\Core\Request;
  */
 final class IpResolver
 {
-    /** @var string[] Cloudflare IPv4 ranges */
+    /** @var string[] Cloudflare IPv4 + IPv6 ranges (https://www.cloudflare.com/ips/) */
     private const CLOUDFLARE_RANGES = [
+        // IPv4
         '173.245.48.0/20',
         '103.21.244.0/22',
         '103.22.200.0/22',
@@ -32,6 +33,14 @@ final class IpResolver
         '104.24.0.0/14',
         '172.64.0.0/13',
         '131.0.72.0/22',
+        // IPv6
+        '2400:cb00::/32',
+        '2606:4700::/32',
+        '2803:f800::/32',
+        '2405:b500::/32',
+        '2405:8100::/32',
+        '2a06:98c0::/29',
+        '2c0f:f248::/32',
     ];
 
     /** @var string[] */
