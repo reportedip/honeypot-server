@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.0] - 2026-06-12
+
+### Added
+- Webhooks: Detections können in Echtzeit an eigene Logging-/SIEM-Systeme weitergeleitet werden — neuer Admin-Menüpunkt "Webhooks" mit Verwaltung externer Report-Ziele (JSON-POST, Filter nach Kategorien und/oder Analyzern mit ODER-Logik, optionale HMAC-SHA256-Signatur via `X-ReportedIP-Signature`, Test-Button, Zustellstatus und Fehlerzähler pro Webhook)
+- Neue SQLite-Tabelle `honeypot_webhooks` (automatische Migration via `Database::initialize()`)
+- Webhook-Zustellung erfolgt nach dem Senden der Trap-Response — keine Verzögerung für den Angreifer
+- Zentrale `Version`-Klasse: API-Kommunikation Richtung reportedip.de sendet jetzt immer die aktuelle Version aus der `VERSION`-Datei (dynamischer `User-Agent` statt hartcodiert `1.0.0`, zusätzlich neuer Header `X-Honeypot-Version`)
+- 22 neue Tests (WebhookRepository, WebhookDispatcher, Versions-Header) plus E2E-Test-Skripte (`tests/e2e-webhook-*.php`)
+
+### Fixed
+- IpResolver: Cloudflare-IPv6-Ranges (u. a. `2a06:98c0::/29`, `2606:4700::/32`) ergänzt — bisher wurde hinter Cloudflare bei IPv6-Origin-Verbindungen die Edge-IP statt der echten Client-IP aus `CF-Connecting-IP` gemeldet (API lehnte mit `ip_whitelisted` ab)
+- HeaderAnomalyAnalyzer: False Positive "Suspicious X-Forwarded-For with loopback address" bei legitimen IPv6-Adressen behoben — `::1` wurde als ungeankerter Substring gematcht (z. B. in `2a06:98c0:3600::103`); Loopback-Erkennung vergleicht jetzt jeden XFF-Eintrag exakt
+- ReportQueue: permanent von der API abgelehnte Reports (HTTP 4xx außer 429, z. B. whitelisted IPs) werden als `sent = 2` aus der Queue genommen statt endlos retried — verhinderte bisher per Head-of-line-Blocking das Senden neuer Reports
+- `config.example.php` und WebInstaller: Cloudflare-IPv6-Ranges in `trusted_proxies`-Default aufgenommen
+
 ## [1.1.0] - 2026-02-27
 
 ### Added
