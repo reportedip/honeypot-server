@@ -132,6 +132,23 @@ final class Database
         $pdo->exec('CREATE INDEX IF NOT EXISTS idx_visitors_type ON honeypot_visitors(visitor_type)');
         $pdo->exec('CREATE INDEX IF NOT EXISTS idx_visitors_timestamp ON honeypot_visitors(timestamp)');
         $pdo->exec('CREATE INDEX IF NOT EXISTS idx_visitors_ip ON honeypot_visitors(ip)');
+
+        $pdo->exec('
+            CREATE TABLE IF NOT EXISTS honeypot_webhooks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                url TEXT NOT NULL,
+                secret TEXT DEFAULT \'\',
+                categories TEXT DEFAULT \'\',
+                analyzers TEXT DEFAULT \'\',
+                enabled INTEGER DEFAULT 1,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                last_triggered_at DATETIME,
+                last_status TEXT DEFAULT \'\',
+                failure_count INTEGER DEFAULT 0
+            )
+        ');
+        $pdo->exec('CREATE INDEX IF NOT EXISTS idx_webhooks_enabled ON honeypot_webhooks(enabled)');
     }
 
     /**

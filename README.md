@@ -24,6 +24,7 @@ Zero external Composer dependencies. Runs on vanilla PHP 8.2+. Uses SQLite for p
 - **CMS Emulation** — Realistic WordPress, Drupal, and Joomla front-ends with login pages, admin panels, REST APIs, RSS feeds, sitemaps, and vulnerability paths
 - **36 Threat Analyzers** — SQL injection, XSS, path traversal, brute force, credential stuffing, SSRF, XML-RPC abuse, plugin exploits, config file access, and more
 - **Automatic Reporting** — Detected threats are queued and batch-reported to the reportedip.de API with rate limiting and exponential backoff
+- **Webhooks** — Forward detections in real time to your own logging/SIEM systems via JSON webhooks, filtered by category or analyzer, with optional HMAC-SHA256 signatures
 - **Admin Dashboard** — Web-based panel for monitoring attacks, viewing statistics, managing whitelists, and generating AI content
 - **AI Content Generation** — Optional OpenAI integration to generate realistic blog posts for the fake CMS (AJAX-based, one post at a time to avoid timeouts)
 - **Bot Detection** — Classifies visitors as good bots, bad bots, AI agents, hackers, or humans
@@ -194,6 +195,8 @@ Access the admin panel at your configured path (default: `/_hp_admin`).
 - **Whitelist** — Add/remove IPs and CIDR ranges from the whitelist
 - **Content** — Manage AI-generated blog posts for the fake CMS
 - **Visitors** — Bot/visitor classification log with type breakdown
+- **Webhooks** — Manage external report targets (see [Webhooks](#webhooks))
+- **Updates** — Self-update via GitHub Releases with backups and rollback
 
 ### Security Features
 
@@ -202,6 +205,66 @@ Access the admin panel at your configured path (default: `/_hp_admin`).
 - Session IP binding to prevent session hijacking
 - Security headers: `X-Frame-Options: DENY`, `Content-Security-Policy`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`, `Cache-Control: no-store`
 - `SameSite=Strict` and `HttpOnly` session cookies
+
+## Webhooks
+
+Besides the automatic reporting to reportedip.de, the honeypot can forward every detection to your own systems (SIEM, log management, chat alerts, custom dashboards) in real time. Webhooks are managed in the admin panel under **Webhooks**.
+
+### How It Works
+
+- Each webhook is an HTTP(S) endpoint that receives a JSON `POST` for every matching detection
+- Delivery happens after the trap response has been sent to the attacker, so webhooks never slow down the honeypot
+- **Filters**: restrict a webhook to specific category IDs and/or analyzer names. Empty filters = all detections. When both filters are set, the webhook triggers when *either* one matches
+- **Test button**: every webhook can be verified from the admin panel with a test delivery (`X-ReportedIP-Event: test`)
+- Delivery status, timestamp, and consecutive failure count are shown per webhook
+
+### Request Headers
+
+| Header | Value |
+|---|---|
+| `Content-Type` | `application/json` |
+| `User-Agent` | `reportedip-honeypot-server/<version>` |
+| `X-ReportedIP-Event` | `detection` or `test` |
+| `X-ReportedIP-Signature` | `sha256=<HMAC>` — only when a secret is configured |
+
+### Payload
+
+```json
+{
+  "event": "detection",
+  "generated_at": "2026-06-12T14:00:00+00:00",
+  "honeypot": {
+    "name": "reportedip-honeypot-server",
+    "version": "1.2.0",
+    "host": "your-honeypot.example.com",
+    "profile": "wordpress"
+  },
+  "request": {
+    "ip": "203.0.113.50",
+    "method": "POST",
+    "uri": "/wp-login.php",
+    "user_agent": "sqlmap/1.7"
+  },
+  "detections": [
+    {
+      "analyzer": "SqlInjection",
+      "categories": [16, 45],
+      "category_names": ["SQL Injection", "Code Injection"],
+      "comment": "SQL injection attempt detected: ...",
+      "severity": 85
+    }
+  ]
+}
+```
+
+### Verifying Signatures
+
+When a secret is configured, verify the integrity of each delivery by computing the HMAC over the raw request body:
+
+```php
+$expected = 'sha256=' . hash_hmac('sha256', $rawBody, $secret);
+$valid = hash_equals($expected, $_SERVER['HTTP_X_REPORTEDIP_SIGNATURE'] ?? '');
+```
 
 ## CLI Commands
 

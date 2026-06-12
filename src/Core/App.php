@@ -141,8 +141,31 @@ final class App
         // Serve appropriate trap response regardless of whitelist status
         $this->serveTrap($request, $router);
 
-        // Process web cron (after response is sent to client)
+        // Post-response processing: flush to client first, then run
+        // webhooks and web cron without delaying the trap response
+        $this->flushResponse();
+        $this->dispatchWebhooks($request, $results);
         $this->processWebCron();
+    }
+
+    /**
+     * Forward detections to user-configured webhook endpoints.
+     *
+     * @param array<int, \ReportedIp\Honeypot\Detection\DetectionResult> $results
+     */
+    private function dispatchWebhooks(Request $request, array $results): void
+    {
+        if (empty($results)) {
+            return;
+        }
+
+        try {
+            $repository = new \ReportedIp\Honeypot\Persistence\WebhookRepository($this->db);
+            $dispatcher = new \ReportedIp\Honeypot\Api\WebhookDispatcher($repository, $this->config);
+            $dispatcher->dispatch($request, $results);
+        } catch (\Throwable $e) {
+            // Webhook-Fehler dürfen die Honeypot-Funktion nie beeinträchtigen
+        }
     }
 
     /**
@@ -418,8 +441,6 @@ final class App
         if ($this->config->get('queue_mode', 'web') !== 'web') {
             return;
         }
-
-        $this->flushResponse();
 
         try {
             $processor = new WebCronProcessor($this->db, $this->config);

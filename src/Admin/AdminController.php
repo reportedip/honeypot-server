@@ -96,6 +96,10 @@ final class AdminController
                 $this->handleUpdates($request, $subPath);
                 break;
 
+            case str_starts_with($subPath, '/webhooks'):
+                $this->handleWebhooks($request, $subPath);
+                break;
+
             case $subPath === '/api/stats':
                 $this->handleApiStats();
                 break;
@@ -717,6 +721,174 @@ final class AdminController
             'message_type'    => $flashType,
         ]);
         $response->send();
+    }
+
+    /**
+     * Handle the webhooks page (external report targets) and its actions.
+     */
+    private function handleWebhooks(Request $request, string $subPath): void
+    {
+        $repository = new \ReportedIp\Honeypot\Persistence\WebhookRepository($this->db);
+
+        if ($request->isPost()) {
+            $postData = $request->getPostData();
+            $token = (string) ($postData['csrf_token'] ?? '');
+
+            if (!$this->verifyCsrfToken($token)) {
+                $this->redirectWithMessage('/webhooks', 'Invalid form submission.', 'error');
+                return;
+            }
+
+            // POST /webhooks — add new webhook
+            if ($subPath === '/webhooks' || $subPath === '/webhooks/') {
+                $data = $this->validateWebhookInput($postData);
+                if ($data === null) {
+                    $this->redirectWithMessage('/webhooks', 'Invalid webhook: name and a valid http(s) URL are required.', 'error');
+                    return;
+                }
+                $repository->add($data);
+                $this->redirectWithMessage('/webhooks', 'Webhook added: ' . $data['name'], 'success');
+                return;
+            }
+
+            // POST /webhooks/edit/{id}
+            if (preg_match('#^/webhooks/edit/(\d+)$#', $subPath, $m)) {
+                $id = (int) $m[1];
+                if ($repository->getById($id) === null) {
+                    $this->redirectWithMessage('/webhooks', 'Webhook not found.', 'error');
+                    return;
+                }
+                $data = $this->validateWebhookInput($postData);
+                if ($data === null) {
+                    $this->redirectWithMessage('/webhooks/edit/' . $id, 'Invalid webhook: name and a valid http(s) URL are required.', 'error');
+                    return;
+                }
+                $repository->update($id, $data);
+                $this->redirectWithMessage('/webhooks', 'Webhook updated: ' . $data['name'], 'success');
+                return;
+            }
+
+            // POST /webhooks/delete/{id}
+            if (preg_match('#^/webhooks/delete/(\d+)$#', $subPath, $m)) {
+                $repository->delete((int) $m[1]);
+                $this->redirectWithMessage('/webhooks', 'Webhook deleted.', 'success');
+                return;
+            }
+
+            // POST /webhooks/toggle/{id}
+            if (preg_match('#^/webhooks/toggle/(\d+)$#', $subPath, $m)) {
+                $webhook = $repository->getById((int) $m[1]);
+                if ($webhook !== null) {
+                    $newState = (int) $webhook['enabled'] !== 1;
+                    $repository->setEnabled((int) $m[1], $newState);
+                    $this->redirectWithMessage('/webhooks', 'Webhook ' . ($newState ? 'enabled' : 'disabled') . '.', 'success');
+                    return;
+                }
+                $this->redirectWithMessage('/webhooks', 'Webhook not found.', 'error');
+                return;
+            }
+
+            // POST /webhooks/test/{id}
+            if (preg_match('#^/webhooks/test/(\d+)$#', $subPath, $m)) {
+                $webhook = $repository->getById((int) $m[1]);
+                if ($webhook === null) {
+                    $this->redirectWithMessage('/webhooks', 'Webhook not found.', 'error');
+                    return;
+                }
+                $dispatcher = new \ReportedIp\Honeypot\Api\WebhookDispatcher($repository, $this->config);
+                $result = $dispatcher->sendTest($webhook);
+                $this->redirectWithMessage(
+                    '/webhooks',
+                    'Test delivery to "' . $webhook['name'] . '": ' . $result['status'],
+                    $result['success'] ? 'success' : 'error'
+                );
+                return;
+            }
+
+            $this->redirectWithMessage('/webhooks', 'Unknown action.', 'error');
+            return;
+        }
+
+        // GET /webhooks/edit/{id} — edit form
+        $editWebhook = null;
+        if (preg_match('#^/webhooks/edit/(\d+)$#', $subPath, $m)) {
+            $editWebhook = $repository->getById((int) $m[1]);
+            if ($editWebhook === null) {
+                $this->redirectWithMessage('/webhooks', 'Webhook not found.', 'error');
+                return;
+            }
+        }
+
+        // Flash message from previous action
+        $flashMessage = '';
+        $flashType = '';
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        if (isset($_SESSION['flash_message'])) {
+            $flashMessage = $_SESSION['flash_message'];
+            $flashType = $_SESSION['flash_type'] ?? 'success';
+            unset($_SESSION['flash_message'], $_SESSION['flash_type']);
+        }
+
+        $response = new Response();
+        $response->setContentType('text/html; charset=utf-8');
+        $response->renderTemplate($this->templateDir . '/webhooks.php', [
+            'admin_path'     => $this->adminPath,
+            'csrf_token'     => $this->generateCsrfToken(),
+            'webhooks'       => $repository->getAll(),
+            'edit_webhook'   => $editWebhook,
+            'all_categories' => CategoryRegistry::getAll(),
+            'all_analyzers'  => \ReportedIp\Honeypot\Detection\DetectionPipeline::createDefault()->getAnalyzerNames(),
+            'message'        => $flashMessage,
+            'message_type'   => $flashType,
+        ]);
+        $response->send();
+    }
+
+    /**
+     * Validate and normalize webhook form input.
+     *
+     * @param array<string, mixed> $postData
+     * @return array<string, string>|null Null when name or URL are invalid.
+     */
+    private function validateWebhookInput(array $postData): ?array
+    {
+        $name = trim((string) ($postData['name'] ?? ''));
+        $url = trim((string) ($postData['url'] ?? ''));
+        $secret = trim((string) ($postData['secret'] ?? ''));
+
+        $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+        if ($name === '' || filter_var($url, FILTER_VALIDATE_URL) === false
+            || !in_array($scheme, ['http', 'https'], true)) {
+            return null;
+        }
+
+        // Multi-select arrays → CSV; nur bekannte Werte übernehmen
+        $categories = [];
+        foreach ((array) ($postData['categories'] ?? []) as $catId) {
+            if (is_numeric($catId) && CategoryRegistry::exists((int) $catId)) {
+                $categories[] = (int) $catId;
+            }
+        }
+        sort($categories);
+
+        $knownAnalyzers = \ReportedIp\Honeypot\Detection\DetectionPipeline::createDefault()->getAnalyzerNames();
+        $analyzers = [];
+        foreach ((array) ($postData['analyzers'] ?? []) as $analyzerName) {
+            if (in_array((string) $analyzerName, $knownAnalyzers, true)) {
+                $analyzers[] = (string) $analyzerName;
+            }
+        }
+        sort($analyzers);
+
+        return [
+            'name'       => $name,
+            'url'        => $url,
+            'secret'     => $secret,
+            'categories' => implode(',', $categories),
+            'analyzers'  => implode(',', $analyzers),
+        ];
     }
 
     /**

@@ -516,6 +516,9 @@
             <a href="<?= htmlspecialchars($admin_path, ENT_QUOTES, 'UTF-8') ?>/visitors" class="<?= ($active_tab ?? '') === 'visitors' ? 'active' : '' ?>">
                 <i class="icon">&#9881;</i> Visitors
             </a>
+            <a href="<?= htmlspecialchars($admin_path, ENT_QUOTES, 'UTF-8') ?>/webhooks" class="<?= ($active_tab ?? '') === 'webhooks' ? 'active' : '' ?>">
+                <i class="icon">&#8674;</i> Webhooks
+            </a>
             <a href="<?= htmlspecialchars($admin_path, ENT_QUOTES, 'UTF-8') ?>/updates" class="<?= ($active_tab ?? '') === 'updates' ? 'active' : '' ?>">
                 <i class="icon">&#8635;</i> Updates
                 <?php

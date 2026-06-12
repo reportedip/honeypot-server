@@ -88,6 +88,21 @@ final class DetectionPipeline
     }
 
     /**
+     * Get the names of all registered analyzers.
+     *
+     * @return string[]
+     */
+    public function getAnalyzerNames(): array
+    {
+        $names = array_map(
+            static fn (AnalyzerInterface $a): string => $a->getName(),
+            $this->analyzers
+        );
+        sort($names);
+        return $names;
+    }
+
+    /**
      * Create a pipeline pre-loaded with all 36 default analyzers.
      */
     public static function createDefault(): self
