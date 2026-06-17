@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.2] - 2026-06-17
+
+### Fixed
+- Retry-storm protection: `ReportClient` now applies an exponential backoff (5s → max. 300s) on all transient failures, not just HTTP 429. This covers 5xx server errors, 408 (Request Timeout), 499 (nginx "Client Closed Request") and cURL/connection errors — exactly the codes produced when the API is overloaded. Previously the server kept hammering on 502/503/499 without any backoff and amplified the overload
+- Backoff state is persisted to `data/report_backoff.json`. Under the web-cron model every page visit builds a fresh `ReportClient`, so the former in-memory backoff never survived a single request and was effectively useless
+- 499 and 408 are no longer treated as permanent rejections — such reports are retried after a backoff instead of being dropped
+- Rate limit (default 60/min) is persisted to `data/report_ratelimit.json` and advanced atomically via `flock`; the cap is therefore enforced globally across all requests/processes instead of only within a single client instance
+- `ReportQueue` now stops a batch cleanly while a backoff or rate limit is active, instead of running every remaining entry through and inflating its `failed_attempts` counter without anything being sent
+
 ## [1.3.1] - 2026-06-12
 
 ### Fixed

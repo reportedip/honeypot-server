@@ -10,8 +10,13 @@ use ReportedIp\Honeypot\Core\Version;
 /**
  * HTTP client for the reportedip.de API.
  *
- * Sends IP abuse reports with automatic rate limiting and
- * exponential backoff on 429 responses.
+ * Sends IP abuse reports with automatic rate limiting and exponential
+ * backoff on transient failures (429, 5xx, 408/499, connection errors).
+ *
+ * The backoff state is persisted to disk so it survives between requests
+ * and processes — under the web-cron model a fresh client is built on every
+ * page visit, so an in-memory-only backoff would never take effect and the
+ * server would keep hammering an already overloaded API (retry storm).
  */
 final class ReportClient
 {
@@ -35,6 +40,8 @@ final class ReportClient
     public function __construct(Config $config)
     {
         $this->config = $config;
+        $this->loadBackoffState();
+        $this->loadRateLimitState();
     }
 
     /**
@@ -64,12 +71,42 @@ final class ReportClient
     }
 
     /**
-     * 4xx responses (except 429 rate limiting) are permanent rejections —
-     * retrying the same payload will never succeed.
+     * 4xx responses are permanent rejections — retrying the same payload will
+     * never succeed — EXCEPT for transient 4xx codes:
+     *  - 429 Too Many Requests (rate limited)
+     *  - 408 Request Timeout
+     *  - 499 Client Closed Request (nginx; a symptom of server overload, not
+     *    a payload problem — retrying after a backoff can succeed)
      */
     public static function isPermanentRejectionCode(int $httpCode): bool
     {
-        return $httpCode >= 400 && $httpCode < 500 && $httpCode !== 429;
+        if (self::isTransientFailureCode($httpCode)) {
+            return false;
+        }
+
+        return $httpCode >= 400 && $httpCode < 500;
+    }
+
+    /**
+     * Transient failures warrant a backoff-and-retry rather than dropping the
+     * report: rate limiting (429), request timeout (408), client-closed (499),
+     * any 5xx server error, and connection-level failures (cURL → code 0).
+     *
+     * These are exactly the codes a retry storm produces when the API is
+     * overloaded — backing off on them is what breaks the feedback loop.
+     */
+    public static function isTransientFailureCode(int $httpCode): bool
+    {
+        if ($httpCode === 429 || $httpCode === 408 || $httpCode === 499) {
+            return true;
+        }
+
+        if ($httpCode >= 500 && $httpCode < 600) {
+            return true;
+        }
+
+        // 0 == cURL/connection error (timeout, connection refused, DNS, …)
+        return $httpCode === 0;
     }
 
     /**
@@ -149,10 +186,12 @@ final class ReportClient
         $this->lastHttpCode = $httpCode;
         $this->trackRequest();
 
-        // Handle cURL errors
+        // Handle cURL errors (timeout, connection refused, …) — the API is
+        // unreachable/overloaded, so back off instead of retrying immediately.
         if ($curlError !== '') {
             $this->lastError = sprintf('cURL error: %s', $curlError);
             $this->logApiError($ip, 0, $curlError, '');
+            $this->applyBackoff();
             return false;
         }
 
@@ -166,23 +205,37 @@ final class ReportClient
 
         // Reset backoff on successful request
         if ($httpCode >= 200 && $httpCode < 300) {
-            $this->currentBackoff = 0;
-            $this->backoffUntil = 0;
+            $this->resetBackoff();
             return true;
         }
 
         // Log all other errors
         $this->lastError = sprintf('HTTP %d: %s', $httpCode, substr((string) $response, 0, 200));
         $this->logApiError($ip, $httpCode, 'API request failed', (string) $response);
+
+        // Transient server-side failures (5xx, 408, 499) get a backoff so an
+        // overloaded API isn't hammered. Permanent 4xx rejections do not —
+        // the queue drops those entries instead of retrying.
+        if (self::isTransientFailureCode($httpCode)) {
+            $this->applyBackoff();
+        }
+
         return false;
     }
 
     /**
-     * Check if the client is currently rate limited (local limit).
+     * Check if the client is currently rate limited (sliding 60s window).
+     *
+     * Reloads the persisted timestamps first so the cap is enforced globally
+     * across all requests/processes, not just within this single client
+     * instance (web-cron builds a fresh client on every page visit).
      */
     public function isRateLimited(): bool
     {
         $limit = (int) $this->config->get('report_rate_limit', 60);
+
+        $this->loadRateLimitState();
+
         $now = time();
         $windowStart = $now - 60;
 
@@ -198,15 +251,26 @@ final class ReportClient
     }
 
     /**
-     * Check if the client is in a backoff period (from 429 response).
+     * Check if the client is in a backoff period after a transient failure.
+     *
+     * Public so the queue processor can stop a batch early instead of letting
+     * every entry fail individually while the API is known to be unavailable.
      */
-    private function isBackedOff(): bool
+    public function isBackedOff(): bool
     {
         return $this->backoffUntil > time();
     }
 
     /**
-     * Apply exponential backoff after a 429 response.
+     * Unix timestamp until which the client is backed off (0 if none active).
+     */
+    public function getBackoffUntil(): int
+    {
+        return $this->backoffUntil;
+    }
+
+    /**
+     * Apply exponential backoff after a transient failure and persist it.
      */
     private function applyBackoff(): void
     {
@@ -217,14 +281,177 @@ final class ReportClient
         }
 
         $this->backoffUntil = time() + $this->currentBackoff;
+        $this->persistBackoffState();
     }
 
     /**
-     * Record a request timestamp for local rate limiting.
+     * Clear the backoff after a successful request and persist the reset.
+     */
+    private function resetBackoff(): void
+    {
+        if ($this->currentBackoff === 0 && $this->backoffUntil === 0) {
+            return; // already clear — avoid an unnecessary disk write
+        }
+
+        $this->currentBackoff = 0;
+        $this->backoffUntil = 0;
+        $this->persistBackoffState();
+    }
+
+    /**
+     * Record a request timestamp for rate limiting.
+     *
+     * Performs an atomic read-modify-write under an exclusive file lock so
+     * concurrent page visits (each with their own client) accumulate into one
+     * shared, globally enforced window instead of overwriting each other.
      */
     private function trackRequest(): void
     {
-        $this->requestTimestamps[] = time();
+        $now = time();
+        $windowStart = $now - 60;
+
+        $file = $this->getRateLimitFilePath();
+        if ($file === null) {
+            // No persistent store (e.g. unit tests) — in-memory only
+            $this->requestTimestamps[] = $now;
+            return;
+        }
+
+        $fp = @fopen($file, 'c+');
+        if ($fp === false) {
+            $this->requestTimestamps[] = $now;
+            return;
+        }
+
+        if (flock($fp, LOCK_EX)) {
+            $stored = $this->decodeTimestamps(stream_get_contents($fp) ?: '');
+            $stored[] = $now;
+            $stored = array_values(array_filter(
+                $stored,
+                static function (int $ts) use ($windowStart): bool {
+                    return $ts >= $windowStart;
+                }
+            ));
+            $this->requestTimestamps = $stored;
+
+            ftruncate($fp, 0);
+            rewind($fp);
+            fwrite($fp, json_encode(['timestamps' => $stored]));
+            fflush($fp);
+            flock($fp, LOCK_UN);
+        }
+
+        fclose($fp);
+    }
+
+    /**
+     * Load the persisted rate-limit window so the cap survives across requests.
+     */
+    private function loadRateLimitState(): void
+    {
+        $file = $this->getRateLimitFilePath();
+        if ($file === null || !is_file($file)) {
+            return;
+        }
+
+        $this->requestTimestamps = $this->decodeTimestamps(
+            (string) @file_get_contents($file)
+        );
+    }
+
+    /**
+     * Decode a JSON rate-limit payload into a list of integer timestamps.
+     *
+     * @return int[]
+     */
+    private function decodeTimestamps(string $json): array
+    {
+        $data = @json_decode($json, true);
+        if (is_array($data) && isset($data['timestamps']) && is_array($data['timestamps'])) {
+            return array_map('intval', $data['timestamps']);
+        }
+
+        return [];
+    }
+
+    /**
+     * Load the persisted backoff state so it survives across requests/processes.
+     */
+    private function loadBackoffState(): void
+    {
+        $file = $this->getBackoffFilePath();
+        if ($file === null || !is_file($file)) {
+            return;
+        }
+
+        $data = @json_decode((string) @file_get_contents($file), true);
+        if (!is_array($data)) {
+            return;
+        }
+
+        $this->backoffUntil = (int) ($data['backoff_until'] ?? 0);
+        $this->currentBackoff = (int) ($data['current_backoff'] ?? 0);
+    }
+
+    /**
+     * Persist the current backoff state to disk.
+     */
+    private function persistBackoffState(): void
+    {
+        $file = $this->getBackoffFilePath();
+        if ($file === null) {
+            return;
+        }
+
+        @file_put_contents(
+            $file,
+            json_encode([
+                'backoff_until'   => $this->backoffUntil,
+                'current_backoff' => $this->currentBackoff,
+                'updated_at'      => date('Y-m-d H:i:s'),
+            ], JSON_PRETTY_PRINT),
+            LOCK_EX
+        );
+    }
+
+    /**
+     * Get the path to the persisted backoff state file.
+     *
+     * Returns null when no data directory is configured (e.g. in unit tests),
+     * keeping the backoff purely in-memory and the filesystem untouched.
+     */
+    private function getBackoffFilePath(): ?string
+    {
+        $dataDir = $this->resolveDataDir();
+
+        return $dataDir === null ? null : $dataDir . '/report_backoff.json';
+    }
+
+    /**
+     * Get the path to the persisted rate-limit window file.
+     */
+    private function getRateLimitFilePath(): ?string
+    {
+        $dataDir = $this->resolveDataDir();
+
+        return $dataDir === null ? null : $dataDir . '/report_ratelimit.json';
+    }
+
+    /**
+     * Resolve the writable data directory, or null when none is available.
+     */
+    private function resolveDataDir(): ?string
+    {
+        $dataDir = (string) $this->config->get('data_dir', '');
+        if ($dataDir === '') {
+            $dbPath = (string) $this->config->get('db_path', '');
+            if ($dbPath === '') {
+                return null;
+            }
+            $dataDir = dirname($dbPath);
+        }
+
+        return is_dir($dataDir) ? $dataDir : null;
     }
 
     /**

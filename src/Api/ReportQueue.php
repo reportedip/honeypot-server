@@ -51,6 +51,14 @@ final class ReportQueue
                 continue;
             }
 
+            // Stop the batch while an API backoff is active — otherwise every
+            // remaining entry would run through report(), fail, and inflate its
+            // failed_attempts counter without anything actually being sent.
+            if ($this->client->isBackedOff()) {
+                $result['errors'][] = 'Backoff active, stopping batch';
+                break;
+            }
+
             // Check rate limiting before sending
             if ($this->client->isRateLimited()) {
                 $result['errors'][] = 'Rate limit reached, stopping batch';

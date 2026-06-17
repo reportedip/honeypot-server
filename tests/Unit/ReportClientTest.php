@@ -51,18 +51,143 @@ final class ReportClientTest extends TestCase
 
     public function testPermanentRejectionCodes(): void
     {
-        // 4xx (außer 429) = permanente Ablehnung, kein Retry sinnvoll
+        // 4xx (außer 429/408/499) = permanente Ablehnung, kein Retry sinnvoll
         $this->t->assertTrue(ReportClient::isPermanentRejectionCode(400));
         $this->t->assertTrue(ReportClient::isPermanentRejectionCode(403));
         $this->t->assertTrue(ReportClient::isPermanentRejectionCode(422));
         // 429 = Rate Limit, temporär
         $this->t->assertFalse(ReportClient::isPermanentRejectionCode(429));
+        // 408 Request Timeout / 499 Client Closed (Überlast) = temporär, kein permanenter Reject
+        $this->t->assertFalse(ReportClient::isPermanentRejectionCode(408));
+        $this->t->assertFalse(ReportClient::isPermanentRejectionCode(499));
         // 5xx = Serverfehler, temporär
         $this->t->assertFalse(ReportClient::isPermanentRejectionCode(500));
         $this->t->assertFalse(ReportClient::isPermanentRejectionCode(503));
         // Erfolg / Verbindungsfehler
         $this->t->assertFalse(ReportClient::isPermanentRejectionCode(200));
         $this->t->assertFalse(ReportClient::isPermanentRejectionCode(0));
+    }
+
+    public function testTransientFailureCodes(): void
+    {
+        // Überlast-/Backoff-würdige Codes (exakt die aus dem Retry-Sturm)
+        $this->t->assertTrue(ReportClient::isTransientFailureCode(429));
+        $this->t->assertTrue(ReportClient::isTransientFailureCode(408));
+        $this->t->assertTrue(ReportClient::isTransientFailureCode(499));
+        $this->t->assertTrue(ReportClient::isTransientFailureCode(500));
+        $this->t->assertTrue(ReportClient::isTransientFailureCode(502));
+        $this->t->assertTrue(ReportClient::isTransientFailureCode(503));
+        $this->t->assertTrue(ReportClient::isTransientFailureCode(504));
+        // cURL-/Verbindungsfehler (Timeout, Connection refused)
+        $this->t->assertTrue(ReportClient::isTransientFailureCode(0));
+        // Erfolg und permanente Ablehnungen sind NICHT transient
+        $this->t->assertFalse(ReportClient::isTransientFailureCode(200));
+        $this->t->assertFalse(ReportClient::isTransientFailureCode(400));
+        $this->t->assertFalse(ReportClient::isTransientFailureCode(403));
+    }
+
+    public function testPersistedBackoffIsLoadedAndBlocksReports(): void
+    {
+        $dir = sys_get_temp_dir() . '/rip_backoff_' . uniqid('', true);
+        mkdir($dir, 0777, true);
+
+        try {
+            // Aktiver Backoff (in der Zukunft) wird aus der Datei geladen
+            file_put_contents($dir . '/report_backoff.json', json_encode([
+                'backoff_until'   => time() + 120,
+                'current_backoff' => 40,
+            ]));
+
+            $config = new Config([
+                'api_key'           => 'test_key',
+                'report_rate_limit' => 60,
+                'data_dir'          => $dir,
+            ]);
+            $client = new ReportClient($config);
+
+            $this->t->assertTrue($client->isBackedOff());
+
+            // report() darf nicht senden, solange der Backoff aktiv ist
+            $result = $client->report('1.2.3.4', '16', 'test');
+            $this->t->assertFalse($result);
+            $this->t->assertTrue(str_contains((string) $client->getLastError(), 'Backoff'));
+        } finally {
+            @unlink($dir . '/report_backoff.json');
+            @rmdir($dir);
+        }
+    }
+
+    public function testPersistedRateLimitIsLoadedAcrossInstances(): void
+    {
+        $dir = sys_get_temp_dir() . '/rip_rl_' . uniqid('', true);
+        mkdir($dir, 0777, true);
+
+        try {
+            // 60 frische Timestamps innerhalb des 60s-Fensters
+            $now = time();
+            $timestamps = [];
+            for ($i = 0; $i < 60; $i++) {
+                $timestamps[] = $now;
+            }
+            file_put_contents(
+                $dir . '/report_ratelimit.json',
+                json_encode(['timestamps' => $timestamps])
+            );
+
+            // Frischer Client (wie ein neuer Web-Cron-Request) sieht das Cap
+            $config = new Config(['report_rate_limit' => 60, 'data_dir' => $dir]);
+            $client = new ReportClient($config);
+
+            $this->t->assertTrue($client->isRateLimited());
+        } finally {
+            @unlink($dir . '/report_ratelimit.json');
+            @rmdir($dir);
+        }
+    }
+
+    public function testPersistedRateLimitPrunesExpiredTimestamps(): void
+    {
+        $dir = sys_get_temp_dir() . '/rip_rl_' . uniqid('', true);
+        mkdir($dir, 0777, true);
+
+        try {
+            // Alle Timestamps älter als 60s → fallen aus dem Fenster
+            $old = time() - 120;
+            file_put_contents(
+                $dir . '/report_ratelimit.json',
+                json_encode(['timestamps' => array_fill(0, 100, $old)])
+            );
+
+            $config = new Config(['report_rate_limit' => 60, 'data_dir' => $dir]);
+            $client = new ReportClient($config);
+
+            $this->t->assertFalse($client->isRateLimited());
+        } finally {
+            @unlink($dir . '/report_ratelimit.json');
+            @rmdir($dir);
+        }
+    }
+
+    public function testExpiredBackoffIsNotActive(): void
+    {
+        $dir = sys_get_temp_dir() . '/rip_backoff_' . uniqid('', true);
+        mkdir($dir, 0777, true);
+
+        try {
+            // Abgelaufener Backoff (in der Vergangenheit) blockiert nicht mehr
+            file_put_contents($dir . '/report_backoff.json', json_encode([
+                'backoff_until'   => time() - 10,
+                'current_backoff' => 40,
+            ]));
+
+            $config = new Config(['api_key' => 'test_key', 'data_dir' => $dir]);
+            $client = new ReportClient($config);
+
+            $this->t->assertFalse($client->isBackedOff());
+        } finally {
+            @unlink($dir . '/report_backoff.json');
+            @rmdir($dir);
+        }
     }
 
     public function testUserAgentContainsCurrentVersion(): void
