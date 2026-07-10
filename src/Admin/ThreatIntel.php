@@ -84,6 +84,43 @@ final class ThreatIntel
     }
 
     /**
+     * Get the most recently triggered honeytokens (for the dashboard feed).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getRecentTriggered(int $limit = 5): array
+    {
+        try {
+            return $this->db->query(
+                'SELECT token, token_type, issued_to_ip, triggered_by_ip, triggered_at, trigger_count
+                 FROM honeypot_honeytokens WHERE triggered = 1
+                 ORDER BY triggered_at DESC LIMIT ?',
+                [$limit]
+            )->fetchAll();
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Get the most recent captured payloads without content (for the dashboard feed).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getRecentCaptures(int $limit = 5): array
+    {
+        try {
+            return $this->db->query(
+                'SELECT id, ip, capture_type, filename, size, timestamp
+                 FROM honeypot_captures ORDER BY timestamp DESC LIMIT ?',
+                [$limit]
+            )->fetchAll();
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
      * Get a single capture row including its decoded payload.
      *
      * @return array<string, mixed>|null

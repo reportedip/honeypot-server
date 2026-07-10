@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.5] - 2026-07-10
+
+### Changed
+- **Dashboard redesign**: the admin dashboard now surfaces all collected data sources in a restructured layout — KPI cards with a day-over-day trend chip ("Today" vs. yesterday), first-seen-today IP counter and queue-mode hint; a severity-distribution panel (critical/high/medium/low over the last 7 days, derived from category severities); a dark **Threat Intel** card with summary chips (canaries armed/triggered, captured payloads/volume) and live feeds of the latest triggered honeytokens and captured payloads; a "Top Targeted Paths" ranking (query strings stripped, last 7 days); and a webhook health badge on the Queue Processing card
+- Dashboard KPIs (total, today, unique IPs, queue, triggered honeytokens) auto-refresh every 60 s via the existing `/api/stats` endpoint, which now also returns trend and threat-intel summaries
+- Dashboard markup moved from ad-hoc inline styles to reusable design-system components in the admin layout (`rip-grid`, `rip-chart`, `rip-seg`, `rip-bar-list`, `rip-meter`/`rip-legend`, `rip-intel-card`/`rip-chip`/`rip-feed`, `rip-status-pill`, `rip-kv`, new `rip-alert--warning`/`--info` variants); the activity chart gained per-range totals/peak and a cleaner segmented range switcher
+- New data providers: `Dashboard::getTrends()`, `getSeverityBreakdown()`, `getTopUris()`, `getIntelData()`, `getWebhookSummary()`; `ThreatIntel::getRecentTriggered()`, `getRecentCaptures()`
+
 ## [1.3.4] - 2026-07-10
 
 ### Fixed

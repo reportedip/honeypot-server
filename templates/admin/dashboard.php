@@ -2,7 +2,9 @@
 /**
  * Admin Dashboard Template
  *
- * Variables: $stats, $recent_logs, $whitelist, $system, $chart_data,
+ * Variables: $stats, $recent_logs, $whitelist, $system, $chart_data, $chart_data_ranges,
+ *            $cron_status, $recent_failures, $visitor_stats, $trends, $severity_breakdown,
+ *            $top_uris, $intel, $webhook_summary,
  *            $admin_path, $csrf_token, $message, $message_type, $active_tab,
  *            $categoryRegistry (class name for static calls)
  */
@@ -10,27 +12,60 @@
 $active_tab = $active_tab ?? 'dashboard';
 $page_title = $active_tab === 'whitelist' ? 'Whitelist' : 'Dashboard';
 
+$base = htmlspecialchars($admin_path, ENT_QUOTES, 'UTF-8');
+
+/** Human-readable size. */
+$fmtSize = static function (int $bytes): string {
+    if ($bytes < 1024) {
+        return $bytes . ' B';
+    }
+    if ($bytes < 1048576) {
+        return round($bytes / 1024, 1) . ' KB';
+    }
+    return round($bytes / 1048576, 2) . ' MB';
+};
+
+/** Compact timestamp for feeds: "07-10 14:32". */
+$fmtShortTs = static function (?string $ts): string {
+    if ($ts === null || strlen($ts) < 16) {
+        return (string) $ts;
+    }
+    return substr($ts, 5, 11);
+};
+
 ob_start();
 ?>
 
 <?php if ($active_tab === 'dashboard'): ?>
 
 <?php if (!($system['api_configured'] ?? false)): ?>
-<div class="rip-alert" style="background:var(--rip-warning-light); color:var(--rip-warning-text); border:1px solid var(--rip-warning-border); padding:14px 18px; margin-bottom:20px; border-radius:var(--rip-radius-lg); font-size:var(--rip-font-size-base); line-height:1.6;">
+<div class="rip-alert rip-alert--warning">
     <strong>No Community Access Key configured.</strong> Without an API key, detected attacks are logged locally but not reported to the <a href="https://reportedip.de" target="_blank" rel="noopener" style="color:var(--rip-warning-text); text-decoration:underline;">reportedip.de</a> community database.<br>
     To get your free API key, please contact <a href="mailto:1@reportedip.de" style="color:var(--rip-warning-text); font-weight:700; text-decoration:underline;">1@reportedip.de</a> &mdash; we're looking for testers and community members to help improve detection coverage.
 </div>
 <?php endif; ?>
 
-<!-- Stats Cards -->
-<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:14px; margin-bottom:24px;">
+<?php if ((int) ($stats['total'] ?? 0) === 0): ?>
+<div class="rip-alert rip-alert--info">
+    <strong>Honeypot armed &mdash; no attacks recorded yet.</strong> The emulated <?= htmlspecialchars(ucfirst($system['cms_profile'] ?? 'CMS'), ENT_QUOTES, 'UTF-8') ?> installation is live. As soon as scanners and bots probe it, their activity will appear here.
+</div>
+<?php endif; ?>
+
+<!-- KPI Cards -->
+<?php
+    $trend = $trends ?? ['today' => null, 'change_pct' => null, 'new_ips_today' => 0];
+    $changePct = $trend['change_pct'];
+    $intelSummary = $intel['summary'] ?? ['tokens_issued' => 0, 'tokens_triggered' => 0, 'captures' => 0, 'capture_bytes' => 0];
+    $pendingCount = (int) ($stats['pending'] ?? 0);
+?>
+<div class="rip-grid rip-grid--kpi">
     <div class="rip-stat-card">
         <div class="rip-stat-card__icon rip-stat-card__icon--danger">
             <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
         </div>
         <div class="rip-stat-card__content">
             <div class="rip-stat-card__label">Total Attacks</div>
-            <div class="rip-stat-card__value" style="color:var(--rip-gray-900);"><?= number_format($stats['total'] ?? 0) ?></div>
+            <div class="rip-stat-card__value" style="color:var(--rip-gray-900);" data-kpi="total"><?= number_format($stats['total'] ?? 0) ?></div>
         </div>
     </div>
     <div class="rip-stat-card">
@@ -39,7 +74,16 @@ ob_start();
         </div>
         <div class="rip-stat-card__content">
             <div class="rip-stat-card__label">Today</div>
-            <div class="rip-stat-card__value" style="color:var(--rip-warning);"><?= number_format($stats['today'] ?? 0) ?></div>
+            <div>
+                <span class="rip-stat-card__value" style="color:var(--rip-warning);" data-kpi="today"><?= number_format($stats['today'] ?? 0) ?></span>
+                <?php if ($changePct !== null): ?>
+                    <?php $trendClass = $changePct > 0 ? 'up' : ($changePct < 0 ? 'down' : 'flat'); ?>
+                    <span class="rip-stat-card__trend rip-stat-card__trend--<?= $trendClass ?>" title="Compared to yesterday (<?= number_format((int) ($trend['yesterday'] ?? 0)) ?> events)">
+                        <?= $changePct > 0 ? '&#9650;' : ($changePct < 0 ? '&#9660;' : '&#8213;') ?> <?= abs($changePct) ?>%
+                    </span>
+                <?php endif; ?>
+            </div>
+            <div class="rip-stat-card__hint">vs. yesterday: <?= number_format((int) ($trend['yesterday'] ?? 0)) ?></div>
         </div>
     </div>
     <div class="rip-stat-card">
@@ -48,7 +92,8 @@ ob_start();
         </div>
         <div class="rip-stat-card__content">
             <div class="rip-stat-card__label">Unique IPs</div>
-            <div class="rip-stat-card__value" style="color:var(--rip-info);"><?= number_format($stats['unique_ips'] ?? 0) ?></div>
+            <div class="rip-stat-card__value" style="color:var(--rip-info);" data-kpi="unique_ips"><?= number_format($stats['unique_ips'] ?? 0) ?></div>
+            <div class="rip-stat-card__hint"><?= number_format((int) ($trend['new_ips_today'] ?? 0)) ?> first seen today</div>
         </div>
     </div>
     <div class="rip-stat-card">
@@ -56,13 +101,24 @@ ob_start();
             <svg viewBox="0 0 20 20" fill="currentColor"><path d="M3.196 12.87l-.825.483a.75.75 0 000 1.294l7.25 4.25a.75.75 0 00.758 0l7.25-4.25a.75.75 0 000-1.294l-.825-.484-5.666 3.322a2.25 2.25 0 01-2.276 0L3.196 12.87zM10 2.25L2.371 6.727a.75.75 0 000 1.294l7.25 4.25a.75.75 0 00.758 0l7.25-4.25a.75.75 0 000-1.294L10 2.25z"/></svg>
         </div>
         <div class="rip-stat-card__content">
-            <div class="rip-stat-card__label">Queue Size</div>
-            <div class="rip-stat-card__value" style="color:<?= ($stats['pending'] ?? 0) > 100 ? 'var(--rip-danger)' : 'var(--rip-success)' ?>;"><?= number_format($stats['pending'] ?? 0) ?></div>
+            <div class="rip-stat-card__label">Report Queue</div>
+            <div class="rip-stat-card__value" style="color:<?= $pendingCount > 100 ? 'var(--rip-danger)' : 'var(--rip-success)' ?>;" data-kpi="pending"><?= number_format($pendingCount) ?></div>
+            <div class="rip-stat-card__hint"><?= ($system['queue_mode'] ?? 'web') === 'web' ? 'web mode (auto)' : 'cron mode' ?></div>
         </div>
     </div>
+    <a class="rip-stat-card" href="<?= $base ?>/intel" title="Open Threat Intel">
+        <div class="rip-stat-card__icon" style="background:var(--rip-gray-900); color:var(--rip-sidebar-active-text);">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 2.75A.75.75 0 013.75 2h.5a.75.75 0 01.75.75V3h9.19c.83 0 1.3.94.8 1.6l-1.7 2.27a.25.25 0 000 .3l1.7 2.26c.5.66.03 1.6-.8 1.6H5v6.22a.75.75 0 01-.75.75h-.5a.75.75 0 01-.75-.75V2.75z" clip-rule="evenodd"/></svg>
+        </div>
+        <div class="rip-stat-card__content">
+            <div class="rip-stat-card__label">Honeytokens Triggered</div>
+            <div class="rip-stat-card__value" style="color:<?= ((int) $intelSummary['tokens_triggered']) > 0 ? 'var(--rip-danger)' : 'var(--rip-gray-900)' ?>;" data-kpi="tokens_triggered"><?= number_format((int) $intelSummary['tokens_triggered']) ?></div>
+            <div class="rip-stat-card__hint">of <?= number_format((int) $intelSummary['tokens_issued']) ?> issued canaries</div>
+        </div>
+    </a>
 </div>
 
-<!-- Activity Chart with range tabs (24h / 7d / 30d) -->
+<!-- Activity Chart + Severity Breakdown -->
 <?php
     $chartRanges = $chart_data_ranges ?? ['24h' => $chart_data ?? [], '7d' => [], '30d' => []];
     $rangeMeta = [
@@ -70,111 +126,190 @@ ob_start();
         '7d'  => ['title' => 'Last 7 Days',   'tab' => '7 days',  'every' => 1],
         '30d' => ['title' => 'Last 30 Days',  'tab' => '30 days', 'every' => 5],
     ];
+    $sev = $severity_breakdown ?? ['buckets' => ['critical' => 0, 'high' => 0, 'medium' => 0, 'low' => 0], 'total' => 0, 'days' => 7];
+    $sevTotal = (int) $sev['total'];
+    $sevMeta = [
+        'critical' => 'Critical (8-10)',
+        'high'     => 'High (5-7)',
+        'medium'   => 'Medium (3-4)',
+        'low'      => 'Low (1-2)',
+    ];
 ?>
-<div class="rip-card" data-rip-activity-card>
-    <div class="rip-card__header" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-        <span data-rip-activity-title>Activity (<?= htmlspecialchars($rangeMeta['24h']['title'], ENT_QUOTES, 'UTF-8') ?>)</span>
-        <div role="tablist" aria-label="Activity range" style="display:inline-flex; gap:4px; background:var(--rip-gray-100); padding:3px; border-radius:var(--rip-radius-full);">
-            <?php foreach ($rangeMeta as $rangeKey => $meta): ?>
-                <button type="button" role="tab"
-                        data-rip-activity-tab="<?= htmlspecialchars($rangeKey, ENT_QUOTES, 'UTF-8') ?>"
-                        aria-selected="<?= $rangeKey === '24h' ? 'true' : 'false' ?>"
-                        style="border:none; cursor:pointer; padding:4px 12px; font:inherit; font-size:var(--rip-font-size-sm); font-weight:500; border-radius:var(--rip-radius-full); background:<?= $rangeKey === '24h' ? 'var(--rip-bg-card)' : 'transparent' ?>; color:<?= $rangeKey === '24h' ? 'var(--rip-primary)' : 'var(--rip-gray-500)' ?>; box-shadow:<?= $rangeKey === '24h' ? 'var(--rip-shadow-sm)' : 'none' ?>; transition:all 0.15s;">
-                    <?= htmlspecialchars($meta['tab'], ENT_QUOTES, 'UTF-8') ?>
-                </button>
-            <?php endforeach; ?>
-        </div>
-    </div>
-    <?php foreach ($rangeMeta as $rangeKey => $meta): ?>
-        <?php
-            $bars = $chartRanges[$rangeKey] ?? [];
-            $maxCount = 1;
-            foreach ($bars as $bar) {
-                if (($bar['count'] ?? 0) > $maxCount) {
-                    $maxCount = (int) $bar['count'];
-                }
-            }
-        ?>
-        <div data-rip-activity-panel="<?= htmlspecialchars($rangeKey, ENT_QUOTES, 'UTF-8') ?>"
-             data-rip-activity-title-text="<?= htmlspecialchars('Activity (' . $meta['title'] . ')', ENT_QUOTES, 'UTF-8') ?>"
-             style="display:<?= $rangeKey === '24h' ? 'block' : 'none' ?>;">
-            <div style="display:flex; align-items:flex-end; gap:3px; height:120px; padding-top:8px;">
-                <?php foreach ($bars as $bar): ?>
-                    <?php $pct = $maxCount > 0 ? (((int) $bar['count']) / $maxCount) * 100 : 0; ?>
-                    <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;" title="<?= htmlspecialchars($bar['label'] ?? '', ENT_QUOTES, 'UTF-8') ?>: <?= (int) ($bar['count'] ?? 0) ?> events">
-                        <div style="width:100%; min-height:2px; max-height:100%; height:<?= max(2, $pct) ?>%; background:<?= $pct > 70 ? 'var(--rip-danger)' : ($pct > 30 ? 'var(--rip-warning)' : 'var(--rip-primary)') ?>; border-radius:3px 3px 0 0; transition:height 0.3s;"></div>
-                    </div>
+<div class="rip-grid rip-grid--main">
+    <div class="rip-card" data-rip-activity-card>
+        <div class="rip-card__header rip-card__header--flex">
+            <span data-rip-activity-title>Activity (<?= htmlspecialchars($rangeMeta['24h']['title'], ENT_QUOTES, 'UTF-8') ?>)</span>
+            <div class="rip-seg" role="tablist" aria-label="Activity range">
+                <?php foreach ($rangeMeta as $rangeKey => $meta): ?>
+                    <button type="button" role="tab" class="rip-seg__btn"
+                            data-rip-activity-tab="<?= htmlspecialchars($rangeKey, ENT_QUOTES, 'UTF-8') ?>"
+                            aria-selected="<?= $rangeKey === '24h' ? 'true' : 'false' ?>">
+                        <?= htmlspecialchars($meta['tab'], ENT_QUOTES, 'UTF-8') ?>
+                    </button>
                 <?php endforeach; ?>
             </div>
-            <div style="display:flex; gap:3px; margin-top:4px;">
-                <?php foreach ($bars as $i => $bar): ?>
-                    <?php if ($i % $meta['every'] === 0): ?>
-                        <div style="flex:1; text-align:center; font-size:var(--rip-font-size-xs); color:var(--rip-gray-400);"><?= htmlspecialchars($bar['label'] ?? '', ENT_QUOTES, 'UTF-8') ?></div>
-                    <?php else: ?>
-                        <div style="flex:1;"></div>
+        </div>
+        <?php foreach ($rangeMeta as $rangeKey => $meta): ?>
+            <?php
+                $bars = $chartRanges[$rangeKey] ?? [];
+                $peak = 0;
+                $rangeTotal = 0;
+                foreach ($bars as $bar) {
+                    $rangeTotal += (int) ($bar['count'] ?? 0);
+                    $peak = max($peak, (int) ($bar['count'] ?? 0));
+                }
+                $maxCount = max(1, $peak);
+            ?>
+            <div data-rip-activity-panel="<?= htmlspecialchars($rangeKey, ENT_QUOTES, 'UTF-8') ?>"
+                 data-rip-activity-title-text="<?= htmlspecialchars('Activity (' . $meta['title'] . ')', ENT_QUOTES, 'UTF-8') ?>"
+                 style="display:<?= $rangeKey === '24h' ? 'block' : 'none' ?>;">
+                <div class="rip-chart__meta"><?= number_format($rangeTotal) ?> events &middot; peak <?= number_format($peak) ?></div>
+                <div class="rip-chart__bars">
+                    <?php foreach ($bars as $bar): ?>
+                        <?php
+                            $count = (int) ($bar['count'] ?? 0);
+                            $pct = $maxCount > 0 ? ($count / $maxCount) * 100 : 0;
+                        ?>
+                        <div class="rip-chart__col" title="<?= htmlspecialchars($bar['label'] ?? '', ENT_QUOTES, 'UTF-8') ?>: <?= $count ?> events">
+                            <div class="rip-chart__bar<?= $count === 0 ? ' rip-chart__bar--zero' : '' ?>" style="height:<?= max(2, $pct) ?>%;"></div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <div class="rip-chart__labels">
+                    <?php foreach ($bars as $i => $bar): ?>
+                        <div class="rip-chart__label"><?= $i % $meta['every'] === 0 ? htmlspecialchars($bar['label'] ?? '', ENT_QUOTES, 'UTF-8') : '' ?></div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+
+    <div class="rip-card">
+        <div class="rip-card__header rip-card__header--flex">
+            <span>Severity</span>
+            <span class="rip-card__header-meta">last <?= (int) $sev['days'] ?> days</span>
+        </div>
+        <?php if ($sevTotal > 0): ?>
+            <div class="rip-meter">
+                <?php foreach ($sev['buckets'] as $sevKey => $sevCount): ?>
+                    <?php if ($sevCount > 0): ?>
+                        <div class="rip-meter__seg rip-meter__seg--<?= $sevKey ?>" style="width:<?= ($sevCount / $sevTotal) * 100 ?>%;" title="<?= htmlspecialchars($sevMeta[$sevKey], ENT_QUOTES, 'UTF-8') ?>: <?= number_format($sevCount) ?>"></div>
                     <?php endif; ?>
                 <?php endforeach; ?>
             </div>
-        </div>
-    <?php endforeach; ?>
+            <div class="rip-legend">
+                <?php foreach ($sev['buckets'] as $sevKey => $sevCount): ?>
+                    <div class="rip-legend__row">
+                        <span class="rip-legend__dot rip-legend__dot--<?= $sevKey ?>"></span>
+                        <span class="rip-legend__label"><?= htmlspecialchars($sevMeta[$sevKey], ENT_QUOTES, 'UTF-8') ?></span>
+                        <span class="rip-legend__value"><?= number_format($sevCount) ?></span>
+                        <span class="rip-legend__pct"><?= $sevTotal > 0 ? round(($sevCount / $sevTotal) * 100) : 0 ?>%</span>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <div class="rip-empty-state">
+                <div class="rip-empty-state__text">No events in the last <?= (int) $sev['days'] ?> days.</div>
+            </div>
+        <?php endif; ?>
+    </div>
 </div>
-<script>
-(function() {
-    var card = document.querySelector('[data-rip-activity-card]');
-    if (!card) return;
-    var titleEl = card.querySelector('[data-rip-activity-title]');
-    card.querySelectorAll('[data-rip-activity-tab]').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var range = btn.getAttribute('data-rip-activity-tab');
-            card.querySelectorAll('[data-rip-activity-tab]').forEach(function(b) {
-                var active = b === btn;
-                b.setAttribute('aria-selected', active ? 'true' : 'false');
-                b.style.background = active ? 'var(--rip-bg-card)' : 'transparent';
-                b.style.color = active ? 'var(--rip-primary)' : 'var(--rip-gray-500)';
-                b.style.boxShadow = active ? 'var(--rip-shadow-sm)' : 'none';
-            });
-            card.querySelectorAll('[data-rip-activity-panel]').forEach(function(p) {
-                var match = p.getAttribute('data-rip-activity-panel') === range;
-                p.style.display = match ? 'block' : 'none';
-                if (match && titleEl) {
-                    titleEl.textContent = p.getAttribute('data-rip-activity-title-text') || titleEl.textContent;
-                }
-            });
-        });
-    });
-})();
-</script>
 
-<!-- Visitor Breakdown (24h) -->
+<!-- Threat Intel -->
+<?php
+    $recentTriggered = $intel['recent_triggered'] ?? [];
+    $recentCaptures = $intel['recent_captures'] ?? [];
+?>
+<div class="rip-intel-card">
+    <div class="rip-intel-card__header">
+        <span class="rip-intel-card__title">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd"/></svg>
+            Threat Intel
+        </span>
+        <div class="rip-intel-card__chips">
+            <span class="rip-chip"><strong><?= number_format((int) $intelSummary['tokens_issued']) ?></strong> canaries armed</span>
+            <span class="rip-chip<?= ((int) $intelSummary['tokens_triggered']) > 0 ? ' rip-chip--danger' : '' ?>"><strong><?= number_format((int) $intelSummary['tokens_triggered']) ?></strong> triggered</span>
+            <span class="rip-chip"><strong><?= number_format((int) $intelSummary['captures']) ?></strong> payloads (<?= $fmtSize((int) $intelSummary['capture_bytes']) ?>)</span>
+            <a href="<?= $base ?>/intel" class="rip-link--light">Open Threat Intel &rarr;</a>
+        </div>
+    </div>
+    <div class="rip-intel-card__grid">
+        <div>
+            <div class="rip-intel-card__subtitle">Latest Triggered Honeytokens</div>
+            <?php if (!empty($recentTriggered)): ?>
+                <ul class="rip-feed">
+                    <?php foreach ($recentTriggered as $t): ?>
+                        <li class="rip-feed__item">
+                            <span class="rip-feed__time"><?= htmlspecialchars($fmtShortTs($t['triggered_at'] ?? null), ENT_QUOTES, 'UTF-8') ?></span>
+                            <span class="rip-feed__text">
+                                <span class="rip-feed__mono"><?= htmlspecialchars(str_replace('_', ' ', (string) $t['token_type']), ENT_QUOTES, 'UTF-8') ?></span>
+                                reused by <span class="rip-feed__mono"><?= htmlspecialchars((string) ($t['triggered_by_ip'] ?? '?'), ENT_QUOTES, 'UTF-8') ?></span>
+                                <?php if ((int) ($t['trigger_count'] ?? 0) > 1): ?>(<?= (int) $t['trigger_count'] ?>&times;)<?php endif; ?>
+                            </span>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php else: ?>
+                <div class="rip-feed__empty">No canary credentials have been reused yet. Leaked tokens stay armed until an attacker replays them.</div>
+            <?php endif; ?>
+        </div>
+        <div>
+            <div class="rip-intel-card__subtitle">Latest Captured Payloads</div>
+            <?php if (!empty($recentCaptures)): ?>
+                <ul class="rip-feed">
+                    <?php foreach ($recentCaptures as $c): ?>
+                        <li class="rip-feed__item">
+                            <span class="rip-feed__time"><?= htmlspecialchars($fmtShortTs($c['timestamp'] ?? null), ENT_QUOTES, 'UTF-8') ?></span>
+                            <span class="rip-feed__text">
+                                <span class="rip-feed__mono"><?= htmlspecialchars(str_replace('_', ' ', (string) $c['capture_type']), ENT_QUOTES, 'UTF-8') ?></span>
+                                from <span class="rip-feed__mono"><?= htmlspecialchars((string) $c['ip'], ENT_QUOTES, 'UTF-8') ?></span>
+                                <?php if (!empty($c['filename'])): ?>&mdash; <?= htmlspecialchars((string) $c['filename'], ENT_QUOTES, 'UTF-8') ?><?php endif; ?>
+                                (<?= $fmtSize((int) ($c['size'] ?? 0)) ?>)
+                            </span>
+                            <a href="<?= $base ?>/intel/capture/<?= (int) $c['id'] ?>" class="rip-link--light">View</a>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php else: ?>
+                <div class="rip-feed__empty">No payloads captured yet. Fake-admin uploads, webshell POSTs and DB-admin logins land here.</div>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+
+<!-- Visitor Breakdown + Top Bots -->
 <?php
     $vStats = $visitor_stats ?? ['counts' => [], 'top_bots' => []];
     $vCounts = $vStats['counts'] ?? [];
     $vTopBots = $vStats['top_bots'] ?? [];
     $vTotal = array_sum($vCounts);
     $vTypeLabels = [
-        'good_bot' => ['label' => 'Good Bots', 'color' => 'var(--rip-success)', 'raw' => '#10b981'],
-        'ai_agent' => ['label' => 'AI Agents', 'color' => '#8b5cf6', 'raw' => '#8b5cf6'],
-        'bad_bot'  => ['label' => 'Bad Bots', 'color' => 'var(--rip-danger)', 'raw' => '#ef4444'],
-        'hacker'   => ['label' => 'Hackers', 'color' => 'var(--rip-warning)', 'raw' => '#f59e0b'],
-        'human'    => ['label' => 'Humans', 'color' => 'var(--rip-primary)', 'raw' => '#6366f1'],
+        'good_bot' => ['label' => 'Good Bots', 'raw' => '#10b981'],
+        'ai_agent' => ['label' => 'AI Agents', 'raw' => '#8b5cf6'],
+        'bad_bot'  => ['label' => 'Bad Bots', 'raw' => '#ef4444'],
+        'hacker'   => ['label' => 'Hackers', 'raw' => '#f59e0b'],
+        'human'    => ['label' => 'Humans', 'raw' => '#6366f1'],
     ];
 ?>
-<div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
-    <div class="rip-card" style="margin-bottom:0;">
-        <div class="rip-card__header">Visitor Breakdown (24h)
-            <a href="<?= htmlspecialchars($admin_path, ENT_QUOTES, 'UTF-8') ?>/visitors" class="rip-link" style="float:right; font-size:var(--rip-font-size-sm); font-weight:400;">View All &rarr;</a>
+<div class="rip-grid rip-grid--2">
+    <div class="rip-card">
+        <div class="rip-card__header rip-card__header--flex">
+            <span>Visitor Breakdown (24h)</span>
+            <a href="<?= $base ?>/visitors" class="rip-link rip-card__header-meta">View All &rarr;</a>
         </div>
         <?php if ($vTotal > 0): ?>
-        <?php foreach ($vTypeLabels as $vType => $vInfo): ?>
-            <?php $vCount = $vCounts[$vType] ?? 0; $vPct = $vTotal > 0 ? ($vCount / $vTotal) * 100 : 0; ?>
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:var(--rip-font-size-base);">
-                <span style="width:90px; color:var(--rip-gray-500);"><?= htmlspecialchars($vInfo['label'], ENT_QUOTES, 'UTF-8') ?></span>
-                <div style="flex:1; height:18px; background:var(--rip-bg); border-radius:var(--rip-radius-sm); overflow:hidden;">
-                    <div style="width:<?= max(0, $vPct) ?>%; height:100%; background:<?= htmlspecialchars($vInfo['raw'], ENT_QUOTES, 'UTF-8') ?>; border-radius:var(--rip-radius-sm);"></div>
+        <div class="rip-bar-list">
+            <?php foreach ($vTypeLabels as $vType => $vInfo): ?>
+                <?php $vCount = $vCounts[$vType] ?? 0; $vPct = $vTotal > 0 ? ($vCount / $vTotal) * 100 : 0; ?>
+                <div class="rip-bar-list__row">
+                    <span class="rip-bar-list__label"><?= htmlspecialchars($vInfo['label'], ENT_QUOTES, 'UTF-8') ?></span>
+                    <div class="rip-bar-list__track">
+                        <div class="rip-bar-list__fill" style="width:<?= max(0, $vPct) ?>%; background:<?= htmlspecialchars($vInfo['raw'], ENT_QUOTES, 'UTF-8') ?>;"></div>
+                    </div>
+                    <span class="rip-bar-list__value"><?= number_format($vCount) ?></span>
                 </div>
-                <span style="min-width:50px; text-align:right; font-weight:600;"><?= number_format($vCount) ?></span>
-            </div>
-        <?php endforeach; ?>
+            <?php endforeach; ?>
+        </div>
         <?php else: ?>
         <div class="rip-empty-state">
             <div class="rip-empty-state__text">No visitor data yet.</div>
@@ -182,8 +317,8 @@ ob_start();
         <?php endif; ?>
     </div>
 
-    <div class="rip-card" style="margin-bottom:0;">
-        <div class="rip-card__header">Top Bots & Agents (24h)</div>
+    <div class="rip-card">
+        <div class="rip-card__header">Top Bots &amp; Agents (24h)</div>
         <table class="rip-table">
             <thead><tr><th>Bot Name</th><th>Type</th><th style="text-align:right;">Requests</th></tr></thead>
             <tbody>
@@ -204,10 +339,10 @@ ob_start();
     </div>
 </div>
 
-<div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-    <!-- Top Attacking IPs -->
+<!-- Top IPs / Categories / Targeted Paths -->
+<div class="rip-grid rip-grid--3">
     <div class="rip-card">
-        <div class="rip-card__header">Top 10 Attacking IPs</div>
+        <div class="rip-card__header">Top Attacking IPs</div>
         <table class="rip-table">
             <thead><tr><th>IP Address</th><th style="text-align:right;">Events</th></tr></thead>
             <tbody>
@@ -215,7 +350,7 @@ ob_start();
                 <?php foreach ($stats['top_ips'] as $row): ?>
                     <tr>
                         <td>
-                            <a href="<?= htmlspecialchars($admin_path, ENT_QUOTES, 'UTF-8') ?>/logs?ip=<?= urlencode($row['ip']) ?>" class="rip-link">
+                            <a href="<?= $base ?>/logs?ip=<?= urlencode($row['ip']) ?>" class="rip-link" style="font-family:var(--rip-font-mono); font-size:var(--rip-font-size-sm);">
                                 <?= htmlspecialchars($row['ip'], ENT_QUOTES, 'UTF-8') ?>
                             </a>
                             <a href="https://reportedip.de/ip/<?= urlencode($row['ip']) ?>/" target="_blank" rel="noopener" class="rip-ip-external" title="View on reportedip.de">&#8599;</a>
@@ -230,14 +365,13 @@ ob_start();
         </table>
     </div>
 
-    <!-- Top Categories -->
     <div class="rip-card">
-        <div class="rip-card__header">Top 10 Categories</div>
+        <div class="rip-card__header">Top Categories</div>
         <table class="rip-table">
             <thead><tr><th>Categories</th><th style="text-align:right;">Events</th></tr></thead>
             <tbody>
             <?php if (!empty($stats['top_categories'])): ?>
-                <?php foreach ($stats['top_categories'] as $row): ?>
+                <?php foreach (array_slice($stats['top_categories'], 0, 8) as $row): ?>
                     <tr>
                         <td><?= $categoryRegistry::formatBadges($row['categories']) ?></td>
                         <td style="text-align:right; font-weight:600;"><?= number_format((int)$row['cnt']) ?></td>
@@ -249,6 +383,36 @@ ob_start();
             </tbody>
         </table>
     </div>
+
+    <div class="rip-card">
+        <div class="rip-card__header rip-card__header--flex">
+            <span>Top Targeted Paths</span>
+            <span class="rip-card__header-meta">last 7 days</span>
+        </div>
+        <?php if (!empty($top_uris)): ?>
+            <?php
+                $uriMax = 1;
+                foreach ($top_uris as $u) {
+                    $uriMax = max($uriMax, (int) $u['cnt']);
+                }
+            ?>
+            <div class="rip-bar-list">
+                <?php foreach ($top_uris as $u): ?>
+                    <div class="rip-bar-list__row">
+                        <span class="rip-bar-list__label rip-bar-list__label--wide" title="<?= htmlspecialchars((string) $u['path'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars((string) $u['path'], ENT_QUOTES, 'UTF-8') ?></span>
+                        <div class="rip-bar-list__track">
+                            <div class="rip-bar-list__fill" style="width:<?= ((int) $u['cnt'] / $uriMax) * 100 ?>%;"></div>
+                        </div>
+                        <span class="rip-bar-list__value"><?= number_format((int) $u['cnt']) ?></span>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <div class="rip-empty-state">
+                <div class="rip-empty-state__text">No data yet.</div>
+            </div>
+        <?php endif; ?>
+    </div>
 </div>
 
 <?php endif; ?>
@@ -257,7 +421,7 @@ ob_start();
 <?php if (($active_tab ?? '') === 'whitelist'): ?>
 <div class="rip-card" id="whitelist-section">
     <div class="rip-card__header">IP Whitelist</div>
-    <form method="post" action="<?= htmlspecialchars($admin_path, ENT_QUOTES, 'UTF-8') ?>/whitelist" style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+    <form method="post" action="<?= $base ?>/whitelist" style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token ?? '', ENT_QUOTES, 'UTF-8') ?>">
         <input type="hidden" name="action" value="add">
         <input type="text" name="ip" placeholder="IP or CIDR (e.g. 192.168.1.0/24)" required class="rip-input" style="flex:1; min-width:180px;">
@@ -276,7 +440,7 @@ ob_start();
                     <td><span class="rip-badge <?= $entry['is_active'] ? 'rip-badge--sent' : 'rip-badge--pending' ?>"><?= $entry['is_active'] ? 'Yes' : 'No' ?></span></td>
                     <td>
                         <?php if ($entry['is_active']): ?>
-                        <form method="post" action="<?= htmlspecialchars($admin_path, ENT_QUOTES, 'UTF-8') ?>/whitelist" style="display:inline;">
+                        <form method="post" action="<?= $base ?>/whitelist" style="display:inline;">
                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token ?? '', ENT_QUOTES, 'UTF-8') ?>">
                             <input type="hidden" name="action" value="remove">
                             <input type="hidden" name="ip" value="<?= htmlspecialchars($entry['ip_address'], ENT_QUOTES, 'UTF-8') ?>">
@@ -296,18 +460,19 @@ ob_start();
 
 <!-- Recent Attacks -->
 <div class="rip-card">
-    <div class="rip-card__header">Recent Attacks (Last 20)
-        <a href="<?= htmlspecialchars($admin_path, ENT_QUOTES, 'UTF-8') ?>/logs" class="rip-link" style="float:right; font-size:var(--rip-font-size-sm); font-weight:400;">View All &rarr;</a>
+    <div class="rip-card__header rip-card__header--flex">
+        <span>Recent Attacks</span>
+        <a href="<?= $base ?>/logs" class="rip-link rip-card__header-meta">View All &rarr;</a>
     </div>
     <div style="overflow-x:auto;">
         <table class="rip-table">
             <thead><tr><th>IP</th><th>Categories</th><th>URI</th><th>Method</th><th>Timestamp</th><th>Status</th></tr></thead>
             <tbody>
             <?php if (!empty($recent_logs)): ?>
-                <?php foreach (array_slice($recent_logs, 0, 20) as $log): ?>
+                <?php foreach (array_slice($recent_logs, 0, 12) as $log): ?>
                     <tr>
                         <td style="font-family:var(--rip-font-mono); white-space:nowrap;">
-                            <a href="<?= htmlspecialchars($admin_path, ENT_QUOTES, 'UTF-8') ?>/logs?ip=<?= urlencode($log['ip']) ?>" class="rip-link"><?= htmlspecialchars($log['ip'], ENT_QUOTES, 'UTF-8') ?></a>
+                            <a href="<?= $base ?>/logs?ip=<?= urlencode($log['ip']) ?>" class="rip-link"><?= htmlspecialchars($log['ip'], ENT_QUOTES, 'UTF-8') ?></a>
                             <a href="https://reportedip.de/ip/<?= urlencode($log['ip']) ?>/" target="_blank" rel="noopener" class="rip-ip-external" title="View on reportedip.de">&#8599;</a>
                         </td>
                         <td><?= $categoryRegistry::formatBadges($log['categories'] ?? '') ?></td>
@@ -341,20 +506,22 @@ ob_start();
     $queueMode = $system['queue_mode'] ?? 'web';
     $cron = $cron_status ?? [];
     $cronHealth = $cron['health'] ?? 'unknown';
-    $cronColors = [
-        'healthy'  => ['bg' => 'var(--rip-success-light)', 'color' => 'var(--rip-success-text)', 'border' => 'var(--rip-success-border)', 'dot' => 'var(--rip-success)'],
-        'warning'  => ['bg' => 'var(--rip-warning-light)', 'color' => 'var(--rip-warning-text)', 'border' => 'var(--rip-warning-border)', 'dot' => 'var(--rip-warning)'],
-        'critical' => ['bg' => 'var(--rip-danger-light)', 'color' => 'var(--rip-danger-text)', 'border' => 'var(--rip-danger-border)', 'dot' => 'var(--rip-danger)'],
-        'unknown'  => ['bg' => 'var(--rip-gray-100)', 'color' => 'var(--rip-gray-500)', 'border' => 'var(--rip-gray-300)', 'dot' => 'var(--rip-gray-400)'],
-    ];
-    $cc = $cronColors[$cronHealth] ?? $cronColors['unknown'];
+    $pillClass = in_array($cronHealth, ['healthy', 'warning', 'critical'], true) ? $cronHealth : 'unknown';
+    $webhooks = $webhook_summary ?? ['total' => 0, 'enabled' => 0, 'failing' => 0];
 ?>
 <div class="rip-card">
-    <div class="rip-card__header">
-        Queue Processing
-        <span class="rip-badge" style="margin-left:8px; background:<?= $queueMode === 'web' ? 'var(--rip-primary)' : 'var(--rip-gray-500)' ?>; color:#fff; font-size:var(--rip-font-size-xs); font-weight:500; padding:2px 8px; border-radius:var(--rip-radius-full);"><?= $queueMode === 'web' ? 'Web Mode' : 'Cron Mode' ?></span>
-        <span style="float:right; display:inline-flex; align-items:center; gap:6px; font-size:var(--rip-font-size-sm); font-weight:400; background:<?= $cc['bg'] ?>; color:<?= $cc['color'] ?>; border:1px solid <?= $cc['border'] ?>; padding:2px 10px; border-radius:var(--rip-radius-full);">
-            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:<?= $cc['dot'] ?>;"></span>
+    <div class="rip-card__header rip-card__header--flex">
+        <span>
+            Queue Processing
+            <span class="rip-badge" style="margin-left:8px; background:<?= $queueMode === 'web' ? 'var(--rip-primary)' : 'var(--rip-gray-500)' ?>; color:#fff; font-size:var(--rip-font-size-xs); font-weight:500; padding:2px 8px;"><?= $queueMode === 'web' ? 'Web Mode' : 'Cron Mode' ?></span>
+            <?php if ($webhooks['enabled'] > 0): ?>
+                <span class="rip-badge" style="margin-left:4px; background:var(--rip-gray-100); color:var(--rip-gray-600); font-size:var(--rip-font-size-xs); font-weight:500; padding:2px 8px;" title="<?= (int) $webhooks['failing'] ?> failing">
+                    <?= (int) $webhooks['enabled'] ?> webhook<?= $webhooks['enabled'] !== 1 ? 's' : '' ?><?= $webhooks['failing'] > 0 ? ' (' . (int) $webhooks['failing'] . ' failing)' : '' ?>
+                </span>
+            <?php endif; ?>
+        </span>
+        <span class="rip-status-pill rip-status-pill--<?= $pillClass ?>">
+            <span class="rip-status-pill__dot"></span>
             <?= ucfirst($cronHealth) ?>
         </span>
     </div>
@@ -434,7 +601,7 @@ ob_start();
                         <tr>
                             <td style="white-space:nowrap; font-size:var(--rip-font-size-xs); color:var(--rip-gray-500);"><?= htmlspecialchars((string) ($f['last_failure_at'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
                             <td style="font-family:var(--rip-font-mono); white-space:nowrap;">
-                                <a href="<?= htmlspecialchars($admin_path, ENT_QUOTES, 'UTF-8') ?>/logs?ip=<?= urlencode((string) $f['ip']) ?>" class="rip-link"><?= htmlspecialchars((string) $f['ip'], ENT_QUOTES, 'UTF-8') ?></a>
+                                <a href="<?= $base ?>/logs?ip=<?= urlencode((string) $f['ip']) ?>" class="rip-link"><?= htmlspecialchars((string) $f['ip'], ENT_QUOTES, 'UTF-8') ?></a>
                                 <a href="https://reportedip.de/ip/<?= urlencode((string) $f['ip']) ?>/" target="_blank" rel="noopener" class="rip-ip-external" title="View on reportedip.de">&#8599;</a>
                             </td>
                             <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="<?= htmlspecialchars((string) ($f['request_uri'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
@@ -554,16 +721,89 @@ Register-ScheduledTask -TaskName "HoneypotQueue" -Action $action -Trigger $trigg
 <!-- System Info -->
 <div class="rip-card">
     <div class="rip-card__header">System Information</div>
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; font-size:var(--rip-font-size-base);">
-        <div><span style="color:var(--rip-gray-500);">Version:</span> <?= htmlspecialchars($system['app_version'] ?? '?', ENT_QUOTES, 'UTF-8') ?></div>
-        <div><span style="color:var(--rip-gray-500);">PHP Version:</span> <?= htmlspecialchars($system['php_version'] ?? '', ENT_QUOTES, 'UTF-8') ?></div>
-        <div><span style="color:var(--rip-gray-500);">CMS Profile:</span> <?= htmlspecialchars(ucfirst($system['cms_profile'] ?? ''), ENT_QUOTES, 'UTF-8') ?></div>
-        <div><span style="color:var(--rip-gray-500);">API Configured:</span> <?= ($system['api_configured'] ?? false) ? '<span style="color:var(--rip-success);">Yes</span>' : '<span style="color:var(--rip-danger);">No</span>' ?></div>
-        <div><span style="color:var(--rip-gray-500);">Database Size:</span> <?= htmlspecialchars($system['db_size'] ?? '0 B', ENT_QUOTES, 'UTF-8') ?></div>
-        <div><span style="color:var(--rip-gray-500);">Debug Mode:</span> <?= ($system['debug_mode'] ?? false) ? '<span style="color:var(--rip-warning);">On</span>' : 'Off' ?></div>
-        <div><span style="color:var(--rip-gray-500);">Log Retention:</span> <?= (int)($system['retention_days'] ?? 90) ?> days</div>
+    <div class="rip-kv">
+        <div>
+            <div class="rip-kv__key">Version</div>
+            <div class="rip-kv__val"><?= htmlspecialchars($system['app_version'] ?? '?', ENT_QUOTES, 'UTF-8') ?></div>
+        </div>
+        <div>
+            <div class="rip-kv__key">PHP Version</div>
+            <div class="rip-kv__val"><?= htmlspecialchars($system['php_version'] ?? '', ENT_QUOTES, 'UTF-8') ?></div>
+        </div>
+        <div>
+            <div class="rip-kv__key">CMS Profile</div>
+            <div class="rip-kv__val"><?= htmlspecialchars(ucfirst($system['cms_profile'] ?? ''), ENT_QUOTES, 'UTF-8') ?></div>
+        </div>
+        <div>
+            <div class="rip-kv__key">API Configured</div>
+            <div class="rip-kv__val"><?= ($system['api_configured'] ?? false) ? '<span style="color:var(--rip-success);">Yes</span>' : '<span style="color:var(--rip-danger);">No</span>' ?></div>
+        </div>
+        <div>
+            <div class="rip-kv__key">Database Size</div>
+            <div class="rip-kv__val"><?= htmlspecialchars($system['db_size'] ?? '0 B', ENT_QUOTES, 'UTF-8') ?></div>
+        </div>
+        <div>
+            <div class="rip-kv__key">Debug Mode</div>
+            <div class="rip-kv__val"><?= ($system['debug_mode'] ?? false) ? '<span style="color:var(--rip-warning);">On</span>' : 'Off' ?></div>
+        </div>
+        <div>
+            <div class="rip-kv__key">Log Retention</div>
+            <div class="rip-kv__val"><?= (int)($system['retention_days'] ?? 90) ?> days</div>
+        </div>
     </div>
 </div>
+
+<script>
+(function() {
+    // Activity chart range tabs
+    var card = document.querySelector('[data-rip-activity-card]');
+    if (card) {
+        var titleEl = card.querySelector('[data-rip-activity-title]');
+        card.querySelectorAll('[data-rip-activity-tab]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var range = btn.getAttribute('data-rip-activity-tab');
+                card.querySelectorAll('[data-rip-activity-tab]').forEach(function(b) {
+                    b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
+                });
+                card.querySelectorAll('[data-rip-activity-panel]').forEach(function(p) {
+                    var match = p.getAttribute('data-rip-activity-panel') === range;
+                    p.style.display = match ? 'block' : 'none';
+                    if (match && titleEl) {
+                        titleEl.textContent = p.getAttribute('data-rip-activity-title-text') || titleEl.textContent;
+                    }
+                });
+            });
+        });
+    }
+
+    // Live KPI refresh via the stats API (every 60s)
+    var adminPath = <?= json_encode($admin_path ?? '') ?>;
+    if (!adminPath || !window.fetch || !document.querySelector('[data-kpi]')) {
+        return;
+    }
+    function setKpi(name, value) {
+        var el = document.querySelector('[data-kpi="' + name + '"]');
+        if (el && typeof value === 'number') {
+            el.textContent = value.toLocaleString('en-US');
+        }
+    }
+    setInterval(function() {
+        fetch(adminPath + '/api/stats', { credentials: 'same-origin' })
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(d) {
+                if (!d || !d.stats) return;
+                setKpi('total', d.stats.total);
+                setKpi('today', d.stats.today);
+                setKpi('unique_ips', d.stats.unique_ips);
+                setKpi('pending', d.stats.pending);
+                if (d.intel) {
+                    setKpi('tokens_triggered', d.intel.tokens_triggered);
+                }
+            })
+            .catch(function() { /* offline or session expired: keep last values */ });
+    }, 60000);
+})();
+</script>
 
 <?php
 $content = ob_get_clean();

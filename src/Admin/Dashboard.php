@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ReportedIp\Honeypot\Admin;
 
 use ReportedIp\Honeypot\Core\Config;
+use ReportedIp\Honeypot\Detection\CategoryRegistry;
 use ReportedIp\Honeypot\Persistence\Database;
 use ReportedIp\Honeypot\Persistence\Logger;
 use ReportedIp\Honeypot\Persistence\VisitorLogger;
@@ -47,7 +48,7 @@ final class Dashboard
 
         return [
             'stats'              => $stats,
-            'recent_logs'        => $this->logger->getRecentLogs(15),
+            'recent_logs'        => $this->logger->getRecentLogs(12),
             'whitelist'          => $this->whitelist->getAll(),
             'system'             => $this->getSystemInfo(),
             'chart_data'         => $chartRanges['24h'],
@@ -55,7 +56,161 @@ final class Dashboard
             'cron_status'        => $this->getCronStatus(),
             'recent_failures'    => $this->getRecentFailures(5),
             'visitor_stats'      => $this->getVisitorStats(),
+            'trends'             => $this->getTrends(),
+            'severity_breakdown' => $this->getSeverityBreakdown(7),
+            'top_uris'           => $this->getTopUris(8, 7),
+            'intel'              => $this->getIntelData(),
+            'webhook_summary'    => $this->getWebhookSummary(),
         ];
+    }
+
+    /**
+     * Get short-term trend indicators: today vs. yesterday and first-seen IPs.
+     *
+     * @return array{today: int, yesterday: int, change_pct: ?int, new_ips_today: int}
+     */
+    public function getTrends(): array
+    {
+        try {
+            $today = (int) $this->db->query(
+                "SELECT COUNT(*) FROM honeypot_logs WHERE DATE(timestamp) = DATE('now')"
+            )->fetchColumn();
+
+            $yesterday = (int) $this->db->query(
+                "SELECT COUNT(*) FROM honeypot_logs WHERE DATE(timestamp) = DATE('now', '-1 day')"
+            )->fetchColumn();
+
+            $newIpsToday = (int) $this->db->query(
+                "SELECT COUNT(*) FROM (
+                    SELECT ip FROM honeypot_logs GROUP BY ip HAVING DATE(MIN(timestamp)) = DATE('now')
+                )"
+            )->fetchColumn();
+
+            $changePct = null;
+            if ($yesterday > 0) {
+                $changePct = (int) round((($today - $yesterday) / $yesterday) * 100);
+            }
+
+            return [
+                'today'         => $today,
+                'yesterday'     => $yesterday,
+                'change_pct'    => $changePct,
+                'new_ips_today' => $newIpsToday,
+            ];
+        } catch (\Throwable $e) {
+            return ['today' => 0, 'yesterday' => 0, 'change_pct' => null, 'new_ips_today' => 0];
+        }
+    }
+
+    /**
+     * Bucket recent events by severity class (via each event's highest category severity).
+     *
+     * @return array{buckets: array{critical: int, high: int, medium: int, low: int}, total: int, days: int}
+     */
+    public function getSeverityBreakdown(int $days = 7): array
+    {
+        $buckets = ['critical' => 0, 'high' => 0, 'medium' => 0, 'low' => 0];
+        $total = 0;
+
+        try {
+            $rows = $this->db->query(
+                "SELECT categories, COUNT(*) as cnt FROM honeypot_logs
+                 WHERE timestamp >= datetime('now', '-' || ? || ' days')
+                 GROUP BY categories",
+                [$days]
+            )->fetchAll();
+
+            foreach ($rows as $row) {
+                $maxSeverity = 0;
+                foreach (explode(',', (string) $row['categories']) as $cat) {
+                    $cat = trim($cat);
+                    if ($cat !== '' && is_numeric($cat)) {
+                        $maxSeverity = max($maxSeverity, CategoryRegistry::getSeverity((int) $cat));
+                    }
+                }
+
+                if ($maxSeverity >= 8) {
+                    $class = 'critical';
+                } elseif ($maxSeverity >= 5) {
+                    $class = 'high';
+                } elseif ($maxSeverity >= 3) {
+                    $class = 'medium';
+                } else {
+                    $class = 'low';
+                }
+
+                $buckets[$class] += (int) $row['cnt'];
+                $total += (int) $row['cnt'];
+            }
+        } catch (\Throwable $e) {
+            // Keep zeroed buckets on failure
+        }
+
+        return ['buckets' => $buckets, 'total' => $total, 'days' => $days];
+    }
+
+    /**
+     * Get the most-targeted request paths (query strings stripped).
+     *
+     * @return array<int, array{path: string, cnt: int}>
+     */
+    public function getTopUris(int $limit = 8, int $days = 7): array
+    {
+        try {
+            return $this->db->query(
+                "SELECT CASE WHEN instr(request_uri, '?') > 0
+                             THEN substr(request_uri, 1, instr(request_uri, '?') - 1)
+                             ELSE request_uri END AS path,
+                        COUNT(*) as cnt
+                 FROM honeypot_logs
+                 WHERE timestamp >= datetime('now', '-' || ? || ' days')
+                 GROUP BY path ORDER BY cnt DESC LIMIT ?",
+                [$days, $limit]
+            )->fetchAll();
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Get threat-intel summary and recent activity for the dashboard.
+     *
+     * @return array{summary: array<string, int>, recent_triggered: array<int, array<string, mixed>>, recent_captures: array<int, array<string, mixed>>}
+     */
+    public function getIntelData(): array
+    {
+        $intel = new ThreatIntel($this->db);
+
+        return [
+            'summary'          => $intel->getSummary(),
+            'recent_triggered' => $intel->getRecentTriggered(5),
+            'recent_captures'  => $intel->getRecentCaptures(5),
+        ];
+    }
+
+    /**
+     * Get webhook delivery health summary.
+     *
+     * @return array{total: int, enabled: int, failing: int}
+     */
+    public function getWebhookSummary(): array
+    {
+        try {
+            $row = $this->db->query(
+                'SELECT COUNT(*) AS total,
+                        COALESCE(SUM(CASE WHEN enabled = 1 THEN 1 ELSE 0 END), 0) AS enabled,
+                        COALESCE(SUM(CASE WHEN enabled = 1 AND failure_count > 0 THEN 1 ELSE 0 END), 0) AS failing
+                 FROM honeypot_webhooks'
+            )->fetch();
+
+            return [
+                'total'   => (int) ($row['total'] ?? 0),
+                'enabled' => (int) ($row['enabled'] ?? 0),
+                'failing' => (int) ($row['failing'] ?? 0),
+            ];
+        } catch (\Throwable $e) {
+            return ['total' => 0, 'enabled' => 0, 'failing' => 0];
+        }
     }
 
     /**

@@ -202,6 +202,8 @@
         .rip-alert { padding: var(--rip-space-md) var(--rip-space-lg); border-radius: var(--rip-radius-md); margin-bottom: var(--rip-space-xl); font-size: var(--rip-font-size-base); }
         .rip-alert--success { background: var(--rip-success-light); color: var(--rip-success-text); border: 1px solid var(--rip-success-border); }
         .rip-alert--error { background: var(--rip-danger-light); color: var(--rip-danger-text); border: 1px solid var(--rip-danger-border); }
+        .rip-alert--warning { background: var(--rip-warning-light); color: var(--rip-warning-text); border: 1px solid var(--rip-warning-border); }
+        .rip-alert--info { background: var(--rip-info-light); color: var(--rip-info-text); border: 1px solid var(--rip-info-border); }
 
         /* ============================================================
            Cards
@@ -376,6 +378,182 @@
             letter-spacing: 0.5px;
         }
         .rip-stat-card__value { font-size: 26px; font-weight: 700; margin-top: 1px; line-height: 1.2; }
+
+        /* ============================================================
+           Dashboard Grids
+           ============================================================ */
+        .rip-grid { display: grid; gap: var(--rip-space-xl); margin-bottom: var(--rip-space-xl); }
+        .rip-grid > .rip-card { margin-bottom: 0; }
+        .rip-grid--kpi { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+        .rip-grid--2 { grid-template-columns: 1fr 1fr; }
+        .rip-grid--3 { grid-template-columns: repeat(3, 1fr); }
+        .rip-grid--main { grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); }
+        @media (max-width: 1100px) {
+            .rip-grid--2, .rip-grid--3, .rip-grid--main { grid-template-columns: 1fr; }
+        }
+
+        /* ============================================================
+           Stat Card Extensions (trend chip, hint, clickable)
+           ============================================================ */
+        .rip-stat-card__trend {
+            display: inline-flex; align-items: center; gap: 3px;
+            font-size: var(--rip-font-size-xs); font-weight: 700;
+            padding: 1px 7px; border-radius: var(--rip-radius-full);
+            vertical-align: 3px; margin-left: 6px;
+        }
+        .rip-stat-card__trend--up { background: var(--rip-danger-light); color: var(--rip-danger-text); }
+        .rip-stat-card__trend--down { background: var(--rip-success-light); color: var(--rip-success-text); }
+        .rip-stat-card__trend--flat { background: var(--rip-gray-100); color: var(--rip-gray-500); }
+        .rip-stat-card__hint { font-size: var(--rip-font-size-xs); color: var(--rip-gray-400); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        a.rip-stat-card { text-decoration: none; color: inherit; transition: box-shadow var(--rip-transition); }
+        a.rip-stat-card:hover { box-shadow: var(--rip-shadow-lg); }
+
+        /* ============================================================
+           Segmented Control
+           ============================================================ */
+        .rip-seg { display: inline-flex; gap: 4px; background: var(--rip-gray-100); padding: 3px; border-radius: var(--rip-radius-full); }
+        .rip-seg__btn {
+            border: none; cursor: pointer; padding: 4px 12px; font: inherit;
+            font-size: var(--rip-font-size-sm); font-weight: 500;
+            border-radius: var(--rip-radius-full); background: transparent;
+            color: var(--rip-gray-500); transition: background var(--rip-transition), color var(--rip-transition);
+        }
+        .rip-seg__btn:hover { color: var(--rip-gray-700); }
+        .rip-seg__btn[aria-selected="true"] { background: var(--rip-bg-card); color: var(--rip-primary); box-shadow: var(--rip-shadow-sm); }
+
+        /* ============================================================
+           Activity Chart
+           ============================================================ */
+        .rip-chart__meta { font-size: var(--rip-font-size-xs); color: var(--rip-gray-400); margin-bottom: 4px; }
+        .rip-chart__bars { display: flex; align-items: flex-end; gap: 3px; height: 140px; padding-top: 8px; border-bottom: 1px solid var(--rip-gray-100); }
+        .rip-chart__col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 0; }
+        .rip-chart__bar {
+            width: 100%; min-height: 2px; max-height: 100%;
+            background: linear-gradient(180deg, var(--rip-info) 0%, var(--rip-primary) 100%);
+            border-radius: var(--rip-radius-sm) var(--rip-radius-sm) 0 0;
+            transition: opacity var(--rip-transition);
+        }
+        .rip-chart__bar--zero { background: var(--rip-gray-200); }
+        .rip-chart__col:hover .rip-chart__bar { opacity: 0.7; }
+        .rip-chart__labels { display: flex; gap: 3px; margin-top: 4px; }
+        .rip-chart__label { flex: 1; text-align: center; font-size: var(--rip-font-size-xs); color: var(--rip-gray-400); min-width: 0; }
+
+        /* ============================================================
+           Bar List (horizontal ranking bars)
+           ============================================================ */
+        .rip-bar-list { display: flex; flex-direction: column; gap: 8px; }
+        .rip-bar-list__row { display: flex; align-items: center; gap: 10px; font-size: var(--rip-font-size-base); min-width: 0; }
+        .rip-bar-list__label { width: 100px; flex-shrink: 0; color: var(--rip-gray-600); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .rip-bar-list__label--wide { width: 170px; font-family: var(--rip-font-mono); font-size: var(--rip-font-size-sm); }
+        .rip-bar-list__track { flex: 1; height: 16px; background: var(--rip-gray-100); border-radius: var(--rip-radius-sm); overflow: hidden; }
+        .rip-bar-list__fill { height: 100%; background: var(--rip-primary); border-radius: var(--rip-radius-sm); min-width: 2px; }
+        .rip-bar-list__value { min-width: 48px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+        /* ============================================================
+           Severity Meter & Legend
+           ============================================================ */
+        .rip-meter { display: flex; height: 14px; border-radius: var(--rip-radius-full); overflow: hidden; background: var(--rip-gray-100); }
+        .rip-meter__seg { min-width: 0; }
+        .rip-meter__seg--critical { background: #DC2626; }
+        .rip-meter__seg--high { background: #F97316; }
+        .rip-meter__seg--medium { background: #FACC15; }
+        .rip-meter__seg--low { background: #22C55E; }
+        .rip-legend { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+        .rip-legend__row { display: flex; align-items: center; gap: 8px; font-size: var(--rip-font-size-base); }
+        .rip-legend__dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .rip-legend__dot--critical { background: #DC2626; }
+        .rip-legend__dot--high { background: #F97316; }
+        .rip-legend__dot--medium { background: #FACC15; }
+        .rip-legend__dot--low { background: #22C55E; }
+        .rip-legend__label { flex: 1; color: var(--rip-gray-600); }
+        .rip-legend__value { font-weight: 600; font-variant-numeric: tabular-nums; }
+        .rip-legend__pct { color: var(--rip-gray-400); font-size: var(--rip-font-size-xs); min-width: 38px; text-align: right; }
+
+        /* ============================================================
+           Threat Intel Card (dark)
+           ============================================================ */
+        .rip-intel-card {
+            background: var(--rip-gradient-dark);
+            color: var(--rip-gray-300);
+            border-radius: var(--rip-radius-lg);
+            box-shadow: var(--rip-shadow-md);
+            padding: var(--rip-space-xl);
+            margin-bottom: var(--rip-space-xl);
+        }
+        .rip-intel-card__header {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 12px; flex-wrap: wrap;
+            margin-bottom: 14px; padding-bottom: 12px;
+            border-bottom: 1px solid var(--rip-sidebar-border);
+        }
+        .rip-intel-card__title { font-size: var(--rip-font-size-md); font-weight: 600; color: #FFFFFF; display: inline-flex; align-items: center; gap: 8px; }
+        .rip-intel-card__title svg { width: 16px; height: 16px; color: var(--rip-sidebar-active-text); }
+        .rip-intel-card__chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .rip-intel-card__grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--rip-space-2xl); }
+        @media (max-width: 1100px) { .rip-intel-card__grid { grid-template-columns: 1fr; } }
+        .rip-intel-card__subtitle {
+            font-size: var(--rip-font-size-xs); font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.5px; color: var(--rip-gray-500); margin-bottom: 6px;
+        }
+        .rip-link--light { color: var(--rip-sidebar-active-text); text-decoration: none; font-size: var(--rip-font-size-sm); }
+        .rip-link--light:hover { color: #FFFFFF; }
+
+        /* Chips (dark-card counters) */
+        .rip-chip {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 2px 10px; border-radius: var(--rip-radius-full);
+            font-size: var(--rip-font-size-sm);
+            background: rgba(255,255,255,0.08); color: var(--rip-gray-300);
+        }
+        .rip-chip strong { color: #FFFFFF; font-variant-numeric: tabular-nums; }
+        .rip-chip--danger { background: rgba(239,68,68,0.22); color: #FCA5A5; }
+        .rip-chip--danger strong { color: #FECACA; }
+
+        /* Feed (event list inside dark card) */
+        .rip-feed { list-style: none; display: flex; flex-direction: column; }
+        .rip-feed__item {
+            display: flex; gap: 10px; align-items: baseline;
+            padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+            font-size: var(--rip-font-size-base); min-width: 0;
+        }
+        .rip-feed__item:last-child { border-bottom: none; }
+        .rip-feed__time { color: var(--rip-gray-500); font-size: var(--rip-font-size-xs); white-space: nowrap; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+        .rip-feed__text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .rip-feed__mono { font-family: var(--rip-font-mono); font-size: var(--rip-font-size-sm); color: #E5E7EB; }
+        .rip-feed__empty { padding: 14px 0; color: var(--rip-gray-500); font-size: var(--rip-font-size-base); }
+
+        /* ============================================================
+           Status Pill (health indicator)
+           ============================================================ */
+        .rip-status-pill {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: var(--rip-font-size-sm); font-weight: 400;
+            padding: 2px 10px; border-radius: var(--rip-radius-full);
+            border: 1px solid transparent;
+        }
+        .rip-status-pill__dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+        .rip-status-pill--healthy { background: var(--rip-success-light); color: var(--rip-success-text); border-color: var(--rip-success-border); }
+        .rip-status-pill--healthy .rip-status-pill__dot { background: var(--rip-success); }
+        .rip-status-pill--warning { background: var(--rip-warning-light); color: var(--rip-warning-text); border-color: var(--rip-warning-border); }
+        .rip-status-pill--warning .rip-status-pill__dot { background: var(--rip-warning); }
+        .rip-status-pill--critical { background: var(--rip-danger-light); color: var(--rip-danger-text); border-color: var(--rip-danger-border); }
+        .rip-status-pill--critical .rip-status-pill__dot { background: var(--rip-danger); }
+        .rip-status-pill--unknown { background: var(--rip-gray-100); color: var(--rip-gray-500); border-color: var(--rip-gray-300); }
+        .rip-status-pill--unknown .rip-status-pill__dot { background: var(--rip-gray-400); }
+
+        /* ============================================================
+           Key/Value Grid (system info)
+           ============================================================ */
+        .rip-kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
+        .rip-kv__key {
+            font-size: var(--rip-font-size-xs); font-weight: 600; color: var(--rip-gray-500);
+            text-transform: uppercase; letter-spacing: 0.3px;
+        }
+        .rip-kv__val { margin-top: 2px; font-size: var(--rip-font-size-base); font-weight: 500; color: var(--rip-gray-800); }
+
+        /* Card header helpers */
+        .rip-card__header--flex { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+        .rip-card__header-meta { font-size: var(--rip-font-size-sm); font-weight: 400; color: var(--rip-gray-500); }
 
         /* ============================================================
            Empty State

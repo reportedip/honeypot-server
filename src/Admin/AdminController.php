@@ -355,11 +355,14 @@ final class AdminController
         $dashboard = new Dashboard($this->db, $this->logger, $this->whitelist, $this->config);
         $stats = $this->logger->getStats();
         $chart = $dashboard->getChartData();
+        $intel = new ThreatIntel($this->db);
 
         $response = new Response();
         $response->json([
             'stats'      => $stats,
             'chart_data' => $chart,
+            'trends'     => $dashboard->getTrends(),
+            'intel'      => $intel->getSummary(),
         ]);
         $response->send();
     }
