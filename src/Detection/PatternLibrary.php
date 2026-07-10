@@ -832,4 +832,68 @@ final class PatternLibrary
             'default',
         ];
     }
+
+    /**
+     * Known webshell / backdoor filenames.
+     *
+     * A GET or POST to one of these means the attacker is checking whether an
+     * uploaded shell landed, or scanning for a shell someone else dropped —
+     * a high-signal, low-noise indicator on a site that has none of these files.
+     *
+     * @return string[] Lowercase filenames (matched against the request basename).
+     */
+    public static function webshellFilenames(): array
+    {
+        return [
+            'shell.php', 'c99.php', 'c100.php', 'r57.php', 'wso.php', 'wso2.php',
+            'b374k.php', 'alfa.php', 'alfashell.php', 'indoxploit.php', 'marijuana.php',
+            'mad.php', 'madspot.php', 'priv8.php', 'priv.php', 'x.php', 'xx.php', '0x.php',
+            'up.php', 'upload.php', 'uploader.php', 'gel4y.php', 'gecko.php',
+            'weevely.php', 'phpspy.php', 'adminer.php', 'wp-conf.php', 'wp-conflg.php',
+            'radio.php', 'roco.php', 'sym.php', 'symlink.php', 'bypass.php',
+            'cmd.php', 'shell2.php', 'wshell.php', 'lock360.php', 'dropdown.php',
+            'wp-file-manager.php', 'moon.php', 'jindx.php', 'hax.php', 'hacker.php',
+            '1337.php', 'leaf.php', 'byp.php', 'fox.php', 'reader.php', 'muhtemal.php',
+        ];
+    }
+
+    /**
+     * Probe paths for non-CMS frameworks and appliances.
+     *
+     * A honeypot posing as WordPress/Drupal/Joomla has no reason to receive
+     * these. A hit confirms an indiscriminate mass scanner throwing every known
+     * exploit path at every host regardless of stack.
+     *
+     * @return array<string, string> Regex pattern => human-readable target name.
+     */
+    public static function foreignFrameworkPaths(): array
+    {
+        return [
+            '#/manager/html#i'                         => 'Apache Tomcat Manager',
+            '#/host-manager/html#i'                    => 'Apache Tomcat Host Manager',
+            '#\.action(\?|$)#i'                         => 'Apache Struts action',
+            '#/struts#i'                                => 'Apache Struts',
+            '#/solr/#i'                                 => 'Apache Solr',
+            '#/jenkins/#i'                              => 'Jenkins CI',
+            '#/script(?:Text)?\b#i'                     => 'Jenkins script console',
+            '#Telerik\.Web\.UI#i'                       => 'Telerik UI (CVE-2019-18935)',
+            '#/console/#i'                              => 'Oracle WebLogic Console',
+            '#/wls-wsat/#i'                             => 'Oracle WebLogic WLS-WSAT',
+            '#/api/jsonws/invoke#i'                     => 'Liferay JSONWS (CVE-2020-7961)',
+            '#/actuator/(env|gateway|heapdump|health)#i' => 'Spring Boot Actuator',
+            '#/druid/index\.html#i'                     => 'Alibaba Druid monitor',
+            '#/_ignition/execute-solution#i'            => 'Laravel Ignition (CVE-2021-3129)',
+            '#/vendor/phpunit/#i'                       => 'PHPUnit eval-stdin (CVE-2017-9841)',
+            '#/cgi-bin/luci#i'                          => 'OpenWrt LuCI / router',
+            '#/boaform/#i'                              => 'BOA / IoT router admin',
+            '#/GponForm/#i'                             => 'GPON router (CVE-2018-10561)',
+            '#/setup\.cgi#i'                            => 'Embedded device setup.cgi',
+            '#/remote/(fgt_lang|login)#i'              => 'Fortinet FortiOS SSL-VPN',
+            '#/\+CSCOE\+/#i'                             => 'Cisco ASA WebVPN',
+            '#/nice%20ports#i'                          => 'Nmap service probe',
+            '#/owa/auth#i'                              => 'Microsoft Exchange OWA',
+            '#/autodiscover/autodiscover\.(xml|json)#i' => 'Exchange Autodiscover (ProxyLogon)',
+            '#/\.git/config#i'                          => 'Git config disclosure',
+        ];
+    }
 }

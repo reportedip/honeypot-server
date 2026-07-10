@@ -9,10 +9,10 @@ use ReportedIp\Honeypot\Tests\TestCase;
 
 final class DetectionPipelineTest extends TestCase
 {
-    public function testCreateDefaultLoads36Analyzers(): void
+    public function testCreateDefaultLoads39Analyzers(): void
     {
         $pipeline = DetectionPipeline::createDefault();
-        $this->t->assertEquals(36, $pipeline->getAnalyzerCount());
+        $this->t->assertEquals(39, $pipeline->getAnalyzerCount());
     }
 
     public function testEmptyPipelineReturnsNoResults(): void

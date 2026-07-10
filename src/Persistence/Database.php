@@ -160,6 +160,45 @@ final class Database
             'body_format'   => "TEXT DEFAULT 'json'",
             'body_template' => "TEXT DEFAULT ''",
         ]);
+
+        // Honeytokens: unique canary credentials leaked to attackers per source IP.
+        // A later request that reuses one of these values is confirmed-malicious.
+        $pdo->exec('
+            CREATE TABLE IF NOT EXISTS honeypot_honeytokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                token TEXT NOT NULL UNIQUE,
+                token_type TEXT NOT NULL,
+                issued_to_ip TEXT NOT NULL,
+                source_path TEXT NOT NULL,
+                issued_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                triggered INTEGER DEFAULT 0,
+                triggered_by_ip TEXT,
+                triggered_at DATETIME,
+                trigger_count INTEGER DEFAULT 0
+            )
+        ');
+        $pdo->exec('CREATE INDEX IF NOT EXISTS idx_honeytokens_token ON honeypot_honeytokens(token)');
+        $pdo->exec('CREATE INDEX IF NOT EXISTS idx_honeytokens_ip ON honeypot_honeytokens(issued_to_ip)');
+        $pdo->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_honeytokens_ip_type ON honeypot_honeytokens(issued_to_ip, token_type)');
+
+        // Captured payloads: uploads and bodies collected from high-interaction traps
+        // (fake admin plugin/theme upload, webshell POSTs). Threat-intel storage.
+        $pdo->exec('
+            CREATE TABLE IF NOT EXISTS honeypot_captures (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ip TEXT NOT NULL,
+                capture_type TEXT NOT NULL,
+                filename TEXT DEFAULT \'\',
+                content_type TEXT DEFAULT \'\',
+                size INTEGER DEFAULT 0,
+                content_b64 TEXT DEFAULT \'\',
+                request_uri TEXT DEFAULT \'\',
+                user_agent TEXT DEFAULT \'\',
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ');
+        $pdo->exec('CREATE INDEX IF NOT EXISTS idx_captures_ip ON honeypot_captures(ip)');
+        $pdo->exec('CREATE INDEX IF NOT EXISTS idx_captures_timestamp ON honeypot_captures(timestamp)');
     }
 
     /**

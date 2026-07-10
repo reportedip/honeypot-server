@@ -21,6 +21,13 @@ class LoginTrap implements TrapInterface
     /** Usernames that the honeypot pretends exist (triggers "incorrect password"). */
     private const KNOWN_USERNAMES = ['admin', 'editor', 'administrator', 'webmaster'];
 
+    /**
+     * Percent chance that a login attempt for a known username is "accepted",
+     * dropping the attacker into the inert fake admin so their follow-up
+     * actions (plugin/theme upload) can be captured. Set to 0 to disable.
+     */
+    private const STICKY_ADMIN_CHANCE = 8;
+
     public function getName(): string
     {
         return 'login';
@@ -52,6 +59,13 @@ class LoginTrap implements TrapInterface
 
             $postData = $request->getPostData();
             $username = $this->extractUsername($postData, $profile->getName());
+
+            // Occasionally "accept" the login for a known username and hand the
+            // attacker a fake, inert admin session (sticky admin).
+            if ($this->shouldGrantStickyAdmin($username)) {
+                return $this->grantStickyAdmin($response, $profile, $username);
+            }
+
             $data['error'] = $this->getErrorMessage($profile->getName(), $username);
             $data['username_value'] = $username;
         }
@@ -62,6 +76,52 @@ class LoginTrap implements TrapInterface
         $response->setContentType('text/html; charset=UTF-8');
         $response->renderTemplate($templatePath, $data);
 
+        return $response;
+    }
+
+    /**
+     * Decide whether this login attempt should be granted a sticky admin session.
+     */
+    private function shouldGrantStickyAdmin(string $username): bool
+    {
+        if (self::STICKY_ADMIN_CHANCE <= 0) {
+            return false;
+        }
+        $lower = strtolower(trim($username));
+        if ($lower === '' || !in_array($lower, self::KNOWN_USERNAMES, true)) {
+            return false;
+        }
+        return random_int(1, 100) <= self::STICKY_ADMIN_CHANCE;
+    }
+
+    /**
+     * Issue a fake auth cookie and redirect to the admin dashboard.
+     *
+     * The cookie name matches what {@see AdminTrap} looks for; the session is
+     * entirely fake and grants no real capability.
+     */
+    private function grantStickyAdmin(Response $response, CmsProfile $profile, string $username): Response
+    {
+        $hash = bin2hex(random_bytes(16));
+
+        [$cookie, $target] = match ($profile->getName()) {
+            'drupal' => [
+                'SESS' . $hash . '=' . bin2hex(random_bytes(16)) . '; path=/; HttpOnly',
+                '/admin',
+            ],
+            'joomla' => [
+                'joomla_user_state=logged_in; path=/; HttpOnly',
+                '/administrator/',
+            ],
+            default => [
+                'wordpress_logged_in_' . $hash . '='
+                    . rawurlencode($username) . '%7C' . (time() + 172800) . '%7Cfake; path=/; HttpOnly',
+                '/wp-admin/',
+            ],
+        };
+
+        $response->setHeader('Set-Cookie', $cookie);
+        $response->redirect($target, 302);
         return $response;
     }
 

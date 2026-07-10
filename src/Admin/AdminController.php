@@ -100,6 +100,10 @@ final class AdminController
                 $this->handleWebhooks($request, $subPath);
                 break;
 
+            case str_starts_with($subPath, '/intel'):
+                $this->handleIntel($request, $subPath);
+                break;
+
             case $subPath === '/api/stats':
                 $this->handleApiStats();
                 break;
@@ -562,6 +566,71 @@ final class AdminController
             'message'      => $message,
             'message_type' => $error !== '' ? 'error' : 'success',
             'error'        => $error,
+        ]);
+        $response->send();
+    }
+
+    /**
+     * Handle the threat-intel page: honeytokens and captured payloads.
+     */
+    private function handleIntel(Request $request, string $subPath): void
+    {
+        $intel = new \ReportedIp\Honeypot\Admin\ThreatIntel($this->db);
+
+        // GET /intel/capture/{id}/download — raw payload as an attachment
+        if (preg_match('#^/intel/capture/(\d+)/download$#', $subPath, $m)) {
+            $capture = $intel->getCapture((int) $m[1]);
+            $response = new Response();
+            if ($capture === null) {
+                $response->setStatusCode(404)->setContentType('text/plain; charset=utf-8')->setBody('Not found');
+                $response->send();
+                return;
+            }
+            $name = preg_replace('/[^A-Za-z0-9._-]/', '_', (string) ($capture['filename'] ?? '')) ?: ('capture_' . $m[1]);
+            $response->setStatusCode(200);
+            $response->setContentType('application/octet-stream');
+            $response->setHeader('Content-Disposition', 'attachment; filename="' . $name . '.bin"');
+            $response->setHeader('X-Content-Type-Options', 'nosniff');
+            $response->setBody((string) $capture['content']);
+            $response->send();
+            return;
+        }
+
+        // GET /intel/capture/{id} — decoded payload detail (rendered inert)
+        if (preg_match('#^/intel/capture/(\d+)$#', $subPath, $m)) {
+            $capture = $intel->getCapture((int) $m[1]);
+            $response = new Response();
+            if ($capture === null) {
+                $response->setStatusCode(404)->setContentType('text/html; charset=utf-8')
+                    ->setBody('<html><body><h1>Capture Not Found</h1></body></html>');
+                $response->send();
+                return;
+            }
+            $response->setContentType('text/html; charset=utf-8');
+            $response->renderTemplate($this->templateDir . '/intel_capture.php', [
+                'capture'    => $capture,
+                'admin_path' => $this->adminPath,
+                'csrf_token' => $this->generateCsrfToken(),
+            ]);
+            $response->send();
+            return;
+        }
+
+        // GET /intel — list (tab: tokens | captures)
+        $tab = $request->getQueryParam('tab') === 'captures' ? 'captures' : 'tokens';
+        $page = (int) ($request->getQueryParam('page') ?? '1');
+        $tokens = $intel->getHoneytokens($tab === 'tokens' ? $page : 1);
+        $captures = $intel->getCaptures($tab === 'captures' ? $page : 1);
+
+        $response = new Response();
+        $response->setContentType('text/html; charset=utf-8');
+        $response->renderTemplate($this->templateDir . '/intel.php', [
+            'admin_path' => $this->adminPath,
+            'csrf_token' => $this->generateCsrfToken(),
+            'summary'    => $intel->getSummary(),
+            'tab'        => $tab,
+            'tokens'     => $tokens,
+            'captures'   => $captures,
         ]);
         $response->send();
     }

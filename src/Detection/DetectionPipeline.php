@@ -13,6 +13,7 @@ use ReportedIp\Honeypot\Detection\Analyzers\CoreFileModificationAnalyzer;
 use ReportedIp\Honeypot\Detection\Analyzers\CredentialStuffingAnalyzer;
 use ReportedIp\Honeypot\Detection\Analyzers\DatabaseBackupAccessAnalyzer;
 use ReportedIp\Honeypot\Detection\Analyzers\FileUploadMalwareAnalyzer;
+use ReportedIp\Honeypot\Detection\Analyzers\ForeignFrameworkProbeAnalyzer;
 use ReportedIp\Honeypot\Detection\Analyzers\FormSpamAnalyzer;
 use ReportedIp\Honeypot\Detection\Analyzers\HeaderAnomalyAnalyzer;
 use ReportedIp\Honeypot\Detection\Analyzers\HttpVerbAnalyzer;
@@ -28,6 +29,7 @@ use ReportedIp\Honeypot\Detection\Analyzers\RegistrationHoneypotAnalyzer;
 use ReportedIp\Honeypot\Detection\Analyzers\ResourceExhaustionAnalyzer;
 use ReportedIp\Honeypot\Detection\Analyzers\SearchSpamAnalyzer;
 use ReportedIp\Honeypot\Detection\Analyzers\SessionHijackingAnalyzer;
+use ReportedIp\Honeypot\Detection\Analyzers\SpiderTrapAnalyzer;
 use ReportedIp\Honeypot\Detection\Analyzers\SqlInjectionAnalyzer;
 use ReportedIp\Honeypot\Detection\Analyzers\SsrfAnalyzer;
 use ReportedIp\Honeypot\Detection\Analyzers\ThemeExploitAnalyzer;
@@ -37,6 +39,7 @@ use ReportedIp\Honeypot\Detection\Analyzers\UserAgentAnalyzer;
 use ReportedIp\Honeypot\Detection\Analyzers\UserEnumerationAnalyzer;
 use ReportedIp\Honeypot\Detection\Analyzers\VersionFingerprintingAnalyzer;
 use ReportedIp\Honeypot\Detection\Analyzers\VulnerabilityProbeAnalyzer;
+use ReportedIp\Honeypot\Detection\Analyzers\WebshellAccessAnalyzer;
 use ReportedIp\Honeypot\Detection\Analyzers\WpCliAbuseAnalyzer;
 use ReportedIp\Honeypot\Detection\Analyzers\WpCronAbuseAnalyzer;
 use ReportedIp\Honeypot\Detection\Analyzers\XmlRpcAnalyzer;
@@ -103,7 +106,7 @@ final class DetectionPipeline
     }
 
     /**
-     * Create a pipeline pre-loaded with all 36 default analyzers.
+     * Create a pipeline pre-loaded with all 39 default analyzers.
      */
     public static function createDefault(): self
     {
@@ -152,6 +155,11 @@ final class DetectionPipeline
         $pipeline->addAnalyzer(new UnicodeEncodingAttackAnalyzer());
         $pipeline->addAnalyzer(new RateLimitBypassAnalyzer());
         $pipeline->addAnalyzer(new JavaScriptInjectionAnalyzer());
+
+        // --- Wave 4: High-interaction lures (3) ---
+        $pipeline->addAnalyzer(new WebshellAccessAnalyzer());
+        $pipeline->addAnalyzer(new ForeignFrameworkProbeAnalyzer());
+        $pipeline->addAnalyzer(new SpiderTrapAnalyzer());
 
         return $pipeline;
     }

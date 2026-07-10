@@ -8,6 +8,7 @@ use ReportedIp\Honeypot\Content\ContentRepository;
 use ReportedIp\Honeypot\Content\ContentUrlGenerator;
 use ReportedIp\Honeypot\Core\Request;
 use ReportedIp\Honeypot\Core\Response;
+use ReportedIp\Honeypot\Detection\SpiderTrap;
 use ReportedIp\Honeypot\Persistence\Database;
 use ReportedIp\Honeypot\Profile\CmsProfile;
 
@@ -111,6 +112,10 @@ class MiscTrap implements TrapInterface, DatabaseAwareInterface
                     . "Allow: /wp-admin/admin-ajax.php\n";
                 break;
         }
+
+        // Spider-trap bait: a Disallow entry no human or well-behaved crawler
+        // will ever fetch. Any request to it is flagged by SpiderTrapAnalyzer.
+        $body .= 'Disallow: ' . SpiderTrap::robotsPath() . "\n";
 
         $sitemapPath = $profileName === 'wordpress' ? '/wp-sitemap.xml' : '/sitemap.xml';
         $body .= "\nSitemap: {$sitemapPath}\n";
@@ -248,6 +253,7 @@ XML);
         $now = gmdate('Y-m-d\TH:i:s+00:00');
         $profileName = $profile->getName();
 
+        $baitLoc = SpiderTrap::sitemapPath();
         $urls = <<<XML
 
     <url>
@@ -255,6 +261,12 @@ XML);
         <lastmod>{$now}</lastmod>
         <changefreq>daily</changefreq>
         <priority>1.0</priority>
+    </url>
+    <url>
+        <loc>{$baitLoc}</loc>
+        <lastmod>{$now}</lastmod>
+        <changefreq>never</changefreq>
+        <priority>0.1</priority>
     </url>
 XML;
 

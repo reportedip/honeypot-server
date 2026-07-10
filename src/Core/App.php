@@ -6,6 +6,7 @@ namespace ReportedIp\Honeypot\Core;
 
 use ReportedIp\Honeypot\Detection\BotDetector;
 use ReportedIp\Honeypot\Detection\DetectionPipeline;
+use ReportedIp\Honeypot\Detection\Honeytoken;
 use ReportedIp\Honeypot\Network\IpResolver;
 use ReportedIp\Honeypot\Persistence\Database;
 use ReportedIp\Honeypot\Persistence\Logger;
@@ -126,12 +127,24 @@ final class App
                 $pipeline = DetectionPipeline::createDefault();
                 $results = $pipeline->analyze($request);
 
+                // Honeytoken reuse: replay of a leaked canary credential is a
+                // confirmed-malicious signal regardless of what else matched.
+                $honeytokenResult = (new Honeytoken($this->db))
+                    ->detectReuse($this->buildHoneytokenHaystack($request), $request->getIp());
+                if ($honeytokenResult !== null) {
+                    $results[] = $honeytokenResult;
+                }
+
                 // Log detections
                 if (!empty($results)) {
                     $this->logger->log($request, $results);
                 }
             }
         }
+
+        // Tarpit: slow down confirmed time-based blind SQL injection so the
+        // attacker's tool "confirms" the injection and wastes its own time.
+        $this->maybeTarpit($request);
 
         // Log visitor type for bot statistics (only for real page requests, not assets)
         if (!$isStaticAsset) {
@@ -166,6 +179,53 @@ final class App
         } catch (\Throwable $e) {
             // Webhook-Fehler dürfen die Honeypot-Funktion nie beeinträchtigen
         }
+    }
+
+    /**
+     * Build the string scanned for honeytoken reuse: URI, body, POST values,
+     * cookies and the Authorization header.
+     */
+    private function buildHoneytokenHaystack(Request $request): string
+    {
+        $parts = [$request->getUri(), $request->getBody()];
+
+        foreach ($request->getPostData() as $value) {
+            if (is_scalar($value)) {
+                $parts[] = (string) $value;
+            }
+        }
+        foreach ($request->getCookies() as $value) {
+            $parts[] = $value;
+        }
+        $auth = $request->getHeader('Authorization');
+        if ($auth !== null) {
+            $parts[] = $auth;
+        }
+
+        return implode("\n", $parts);
+    }
+
+    /**
+     * Delay the response when the request carries a time-based blind SQL
+     * injection payload (SLEEP, pg_sleep, BENCHMARK, WAITFOR DELAY).
+     */
+    private function maybeTarpit(Request $request): void
+    {
+        if (!(bool) $this->config->get('tarpit_enabled', true)) {
+            return;
+        }
+
+        $haystack = $request->getUri() . "\n" . $request->getBody();
+        if (!preg_match(
+            '/\b(sleep|pg_sleep|benchmark)\s*\(|waitfor\s+delay|dbms_pipe\.receive_message/i',
+            $haystack
+        )) {
+            return;
+        }
+
+        $maxSeconds = (int) $this->config->get('tarpit_max_seconds', 6);
+        $maxSeconds = max(1, min(15, $maxSeconds));
+        usleep(random_int(2_000_000, $maxSeconds * 1_000_000));
     }
 
     /**
@@ -235,6 +295,10 @@ final class App
             'ReportedIp\\Honeypot\\Trap\\HomeTrap',
             'ReportedIp\\Honeypot\\Trap\\NotFoundTrap',
             'ReportedIp\\Honeypot\\Trap\\MiscTrap',
+            'ReportedIp\\Honeypot\\Trap\\SourceLeakTrap',
+            'ReportedIp\\Honeypot\\Trap\\DbAdminTrap',
+            'ReportedIp\\Honeypot\\Trap\\SystemInfoTrap',
+            'ReportedIp\\Honeypot\\Trap\\WebshellTrap',
         ];
 
         foreach ($trapClasses as $className) {

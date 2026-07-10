@@ -92,6 +92,14 @@ return [
     // Log human visitors (non-bot, non-attacker traffic)
     'log_human_visitors' => true,
 
+    // Tarpit: delay the response on time-based blind SQL injection payloads
+    // (SLEEP, pg_sleep, BENCHMARK, WAITFOR DELAY) so the attacker's tool
+    // "confirms" the injection and wastes its own time.
+    'tarpit_enabled' => true,
+
+    // Maximum tarpit delay in seconds (clamped to 1-15)
+    'tarpit_max_seconds' => 6,
+
     // Custom CA bundle path for cURL (leave empty for system default)
     'ca_bundle' => '',
 

@@ -82,6 +82,13 @@ final class CategoryRegistry
         56 => ['Version Fingerprinting', 'Software-Versions-Erkennung', 4],
         57 => ['WP Plugin Exploit', 'WordPress Plugin-Schwachstelle ausgenutzt', 8],
         58 => ['Config File Exposure', 'Konfigurationsdatei-Zugriff oder -Leak', 9],
+
+        // Honeypot high-interaction categories (59-63)
+        59 => ['Honeytoken Triggered', 'Geleakte Köder-Zugangsdaten wiederverwendet (bestätigt bösartig)', 10],
+        60 => ['Webshell Access', 'Zugriff auf bekannte Webshell- oder Backdoor-Datei', 9],
+        61 => ['Indiscriminate Scan', 'Wahllose Scans nach fremden Frameworks (Tomcat, Solr, Jenkins u. a.)', 6],
+        62 => ['Source Code Disclosure', 'Zugriff auf offengelegte Quellcode-Metadaten (.git, .svn, .env)', 8],
+        63 => ['Spider Trap', 'Abruf eines versteckten Köder-Pfads aus robots.txt/Sitemap', 5],
     ];
 
     /**

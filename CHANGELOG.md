@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.3] - 2026-07-10
+
+### Added
+- **Honeytoken / canary credentials**: fake config leaks (`.env`, `.git/config`, phpMyAdmin) now embed credentials that are unique per source IP and persisted in the new `honeypot_honeytokens` table. Any later request that replays one of these values — from any IP — is a confirmed-malicious event (score 100, new category 59) with near-zero false positives. New `Honeytoken` service plus reuse detection wired into `App::handle()` (scans URI, body, POST values, cookies, Authorization header)
+- **Source/secret disclosure traps** (`SourceLeakTrap`): convincing fake responses for the most-scanned disclosure paths — `.env` (with per-IP honeytokens for DB/AWS/JWT/mail secrets), `.git/config`, `.git/HEAD`, `.git/logs/HEAD`, `.git/index`, `.svn/entries`
+- **Fake DB-admin panels** (`DbAdminTrap`): realistic phpMyAdmin 5.2.1 and Adminer 4.8.1 login screens; submitted credentials are captured for intel and login always "fails"
+- **Fake server-info endpoints** (`SystemInfoTrap`): plausible output for `/server-status`, `/server-info` (Apache mod_status) and Spring Boot Actuator (`/actuator`, `/actuator/env`, `/actuator/health`)
+- **Webshell trap** (`WebshellTrap`): serves an inert shell prompt for known webshell filenames and disguised uploads; any command/password POSTed is captured. New `WebshellAccessAnalyzer` (category 60)
+- **Spider trap**: hidden bait paths advertised only in robots.txt (Disallow), the sitemap, and a hidden home-page link. Requesting one flags an automated crawler with almost no false positives. New `SpiderTrapAnalyzer` (category 63)
+- **Indiscriminate-scan detection** (`ForeignFrameworkProbeAnalyzer`): probes for Tomcat, Solr, Jenkins, WebLogic, Telerik, Fortinet/Cisco VPN and similar non-CMS targets are flagged as blind mass-scanning (category 61)
+- **Sticky admin**: known-username logins are occasionally "accepted" (configurable via `LoginTrap::STICKY_ADMIN_CHANCE`), dropping the attacker into the inert fake admin. Plugin/theme upload payloads are captured (`AdminTrap`) and the install always reports "Incompatible Archive"
+- **Blind-SQLi tarpit**: requests carrying time-based payloads (`SLEEP`, `pg_sleep`, `BENCHMARK`, `WAITFOR DELAY`) get a deliberate response delay, so the attacker's tool "confirms" the injection and wastes its own time (`tarpit_enabled`, `tarpit_max_seconds`)
+- New `honeypot_captures` table (`PayloadCapture` service) storing uploaded/POSTed payloads base64-encoded, capped at 256 KiB
+- **Admin panel "Threat Intel" page** (`src/Admin/ThreatIntel.php`): tabbed view of issued/triggered honeytokens (with leaking vs. reusing IP) and captured payloads, plus a per-payload detail view. Attacker payloads are rendered strictly as escaped, inert text (control bytes neutralized) with a raw-download option served as `application/octet-stream`
+- New reporting categories 59–63 (Honeytoken Triggered, Webshell Access, Indiscriminate Scan, Source Code Disclosure, Spider Trap); detection pipeline grew from 36 to 39 analyzers
+- 33 new tests covering the three new analyzers, the honeytoken service, the threat-intel reader, and end-to-end leak→reuse and admin-render verifications
+
 ## [1.3.2] - 2026-06-17
 
 ### Fixed
