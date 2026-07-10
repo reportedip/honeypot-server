@@ -64,6 +64,13 @@ Configure your web server:
 - **nginx** — Copy `config/nginx.conf.example` and adjust paths
 - **Apache** — Copy `config/apache.htaccess.example` to your document root
 
+> **Important — route *all* requests to `index.php`, including dotfiles.**
+> Several traps depend on requests for `.env`, `.git/config`, `.svn/`, and `robots.txt` reaching the honeypot (the source-leak trap that issues honeytokens, and the spider trap). Default server hardening — common on managed hosting and control panels like ISPConfig/Plesk — blocks dotfiles with a `403` and serves `robots.txt` statically (`404` when absent), so those requests never reach `public/index.php` and the traps silently stay dormant.
+>
+> The shipped `nginx.conf.example` already routes these paths through `index.php` (via `^~ /.env`, `^~ /.git`, `^~ /.svn`, `= /robots.txt` locations that outrank the `location ~ /\.` deny rule). On Apache, make sure no global `<FilesMatch "^\.">` / `<DirectoryMatch /\.git>` deny rule blocks them for this vhost. Keep `/.well-known/` allowed so ACME/TLS still works.
+>
+> **Quick check:** `curl -s https://your-honeypot/.env` should return a fake `.env` with `APP_KEY`/`DB_PASSWORD` values (served with the spoofed `Server: Apache` header) — not a `403` from your real web server.
+
 Then open the website URL in your browser. The web installer starts automatically when no `config/config.php` exists and guides you through:
 
 1. System requirements check (PHP 8.2+, required extensions)
@@ -218,9 +225,19 @@ Access the admin panel at your configured path (default: `/_hp_admin`).
 - **Whitelist** — Add/remove IPs and CIDR ranges from the whitelist
 - **Content** — Manage AI-generated blog posts for the fake CMS
 - **Visitors** — Bot/visitor classification log with type breakdown
-- **Threat Intel** — Issued/triggered honeytokens and captured attacker payloads (with an inert, escaped payload preview and raw download)
+- **Threat Intel** — Issued/triggered honeytokens and captured attacker payloads (see below)
 - **Webhooks** — Manage external report targets (see [Webhooks](#webhooks))
 - **Updates** — Self-update via GitHub Releases with backups and rollback
+
+### Threat Intel
+
+Where **Logs** records every suspicious request, the **Threat Intel** page shows what attackers left behind after engaging with the high-interaction traps. It has two tabs plus summary counters (honeytokens issued/triggered, payloads captured, captured volume).
+
+**Honeytokens** — the canary credentials leaked by the fake-config traps (`.env`, `.git/config`, phpMyAdmin). Each token is unique per source IP and listed as **Armed** until it is replayed against the honeypot — from any IP — at which point it flips to **Triggered**: a confirmed-malicious event (category 59, severity 100) with near-zero false positives, since the value only ever existed inside a hidden honeypot response. The list pairs the IP a token was *leaked to* with the IP that *reused* it, plus a hit counter.
+
+**Captured Payloads** — the raw data attackers submitted to the traps: uploaded plugin/theme archives from the sticky fake admin, commands and passwords POSTed to the webshell trap, and logins to the fake phpMyAdmin/Adminer panels. Stored base64-encoded in `honeypot_captures` (capped at 256 KiB per payload). *View* opens a detail page; *Download raw* returns the original bytes.
+
+> **Safety:** captured payloads are attacker-controlled and may be hostile (real webshells, malware archives). They are rendered only as escaped, inert text with control bytes neutralised — never executed or shown as active markup — and the raw download is served as a plain `application/octet-stream` attachment.
 
 ### Security Features
 

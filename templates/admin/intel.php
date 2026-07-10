@@ -24,6 +24,38 @@ $base = htmlspecialchars($admin_path, ENT_QUOTES, 'UTF-8');
 ob_start();
 ?>
 
+<!-- Explainer -->
+<details class="rip-card" style="padding:0; margin-bottom:16px;">
+    <summary style="cursor:pointer; padding:14px var(--rip-space-xl); font-weight:600; color:var(--rip-gray-700);">
+        Understanding Threat Intel &mdash; what these two lists mean
+    </summary>
+    <div style="padding:0 var(--rip-space-xl) var(--rip-space-xl); font-size:var(--rip-font-size-base); color:var(--rip-gray-600); line-height:1.65;">
+        <p style="margin-bottom:12px;">
+            While <strong>Logs</strong> records every suspicious request, this page shows what attackers left behind
+            once they engaged with the high-interaction traps.
+        </p>
+        <p style="margin-bottom:12px;">
+            <strong>Honeytokens</strong> are unique fake credentials the honeypot leaks when an attacker grabs a fake
+            config file (<code>.env</code>, <code>.git/config</code>, phpMyAdmin). Each value is tied to the source IP
+            and stored here as <em>Armed</em>. If that value is ever replayed against the honeypot &mdash; from any IP
+            &mdash; it flips to <em>Triggered</em>: a confirmed-malicious signal with near-zero false positives, because
+            the credential only ever existed inside a hidden honeypot response. The list pairs the IP the token was
+            <em>leaked to</em> with the IP that <em>reused</em> it.
+        </p>
+        <p style="margin-bottom:12px;">
+            <strong>Captured Payloads</strong> are the raw data attackers submitted to the traps: uploaded plugin/theme
+            archives from the sticky fake admin, commands and passwords POSTed to the webshell trap, and logins sent to
+            the fake phpMyAdmin/Adminer panels. Open one with <em>View</em>, or grab the original bytes with
+            <em>Download raw</em>.
+        </p>
+        <p style="margin:0; color:var(--rip-gray-500);">
+            <strong>Safety:</strong> captured payloads are attacker-controlled and may be hostile (real webshells,
+            malware archives). They are shown only as escaped, inert text with control bytes neutralised &mdash; never
+            executed or rendered as active markup. The raw download is served as a plain attachment.
+        </p>
+    </div>
+</details>
+
 <!-- Summary Cards -->
 <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; margin-bottom:24px;">
     <div class="rip-stat-card" style="flex-direction:column; text-align:center; gap:4px;">

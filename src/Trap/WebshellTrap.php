@@ -35,6 +35,11 @@ final class WebshellTrap implements TrapInterface, DatabaseAwareInterface
 
     public function handle(Request $request, Response $response, CmsProfile $profile): Response
     {
+        // Match the profile's Server header to avoid a fingerprintable mismatch.
+        $serverHeader = $profile->getDefaultHeaders()['Server'] ?? null;
+        if ($serverHeader !== null) {
+            $response->setHeader('Server', $serverHeader);
+        }
         $response->setContentType('text/html; charset=UTF-8');
         $response->setStatusCode(200);
         $response->setHeader('X-Content-Type-Options', 'nosniff');

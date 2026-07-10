@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.4] - 2026-07-10
+
+### Fixed
+- **Server-header fingerprint on the new bait traps**: `DbAdminTrap`, `WebshellTrap` and `SystemInfoTrap` did not set the spoofed `Server` header, so the real web server's `Server: nginx` (or similar) leaked through on `/phpmyadmin/`, `/adminer.php`, `/server-status`, `/actuator/*` and webshell paths — a mismatch versus the `Server: Apache/2.4.58` sent everywhere else that could out the honeypot. They now adopt the active profile's `Server` header (without the WordPress-specific `Link`/`X-Pingback` headers, which would themselves be out of place on those pages).
+
+### Documentation
+- `config/nginx.conf.example`, `config/apache.htaccess.example` and the README now document a deployment pitfall: default server hardening (common on managed hosting / ISPConfig / Plesk) blocks dotfiles (`.env`, `.git`) with `403` and serves `robots.txt` statically (`404`), so those requests never reach `index.php` and the source-leak/honeytoken and spider traps stay dormant. The nginx example now routes `.env`/`.git`/`.svn`/`robots.txt` through `index.php` via `^~`/`=` locations that outrank the `location ~ /\.` deny rule (with `/.well-known` left intact for ACME/TLS).
+- The **Threat Intel** admin page now carries a built-in, collapsible explainer describing what honeytokens and captured payloads are and the safety model for viewing hostile payloads; the README gains a matching "Threat Intel" section.
+
 ## [1.3.3] - 2026-07-10
 
 ### Added

@@ -33,6 +33,13 @@ final class DbAdminTrap implements TrapInterface, DatabaseAwareInterface
 
     public function handle(Request $request, Response $response, CmsProfile $profile): Response
     {
+        // Match the profile's Server header so this panel is not fingerprintable
+        // by a header mismatch, but skip the WordPress-specific headers (Link,
+        // X-Pingback) that would themselves be out of place on a DB-admin page.
+        $serverHeader = $profile->getDefaultHeaders()['Server'] ?? null;
+        if ($serverHeader !== null) {
+            $response->setHeader('Server', $serverHeader);
+        }
         $response->setHeader('X-Content-Type-Options', 'nosniff');
         $response->setContentType('text/html; charset=UTF-8');
         $response->setStatusCode(200);

@@ -25,6 +25,11 @@ final class SystemInfoTrap implements TrapInterface
 
     public function handle(Request $request, Response $response, CmsProfile $profile): Response
     {
+        // Match the profile's Server header to avoid a fingerprintable mismatch.
+        $serverHeader = $profile->getDefaultHeaders()['Server'] ?? null;
+        if ($serverHeader !== null) {
+            $response->setHeader('Server', $serverHeader);
+        }
         $path = $request->getPath();
         $response->setStatusCode(200);
         $response->setHeader('X-Content-Type-Options', 'nosniff');

@@ -4,7 +4,26 @@ server {
     root /path/to/reportedip-honeypot-server/public;
     index index.php;
 
-    # ALL requests go through index.php
+    # ---------------------------------------------------------------------
+    # IMPORTANT: the honeypot only works if EVERY request reaches index.php.
+    #
+    # Default server hardening (common on managed hosting / control panels
+    # like ISPConfig or Plesk) blocks dotfiles such as .env and .git with a
+    # `location ~ /\.` deny rule, and serves robots.txt as a static file that
+    # 404s when absent. Both are exactly the paths several traps rely on
+    # (source-leak trap + honeytokens, spider trap), so they would never
+    # reach the honeypot.
+    #
+    # The `^~` prefix and `=` exact locations below outrank any regex deny
+    # rule and force these paths through index.php. They are deliberately
+    # scoped to .env/.git/.svn so /.well-known (ACME/TLS) stays untouched.
+    # ---------------------------------------------------------------------
+    location ^~ /.env      { try_files /index.php =404; }
+    location ^~ /.git      { try_files /index.php =404; }
+    location ^~ /.svn      { try_files /index.php =404; }
+    location = /robots.txt { try_files /index.php =404; }
+
+    # ALL other requests go through index.php
     location / {
         try_files /index.php =404;
     }

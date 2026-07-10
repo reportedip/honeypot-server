@@ -1,5 +1,18 @@
 RewriteEngine On
 
+# ---------------------------------------------------------------------------
+# IMPORTANT: the honeypot only works if EVERY request reaches index.php —
+# including dotfiles (.env, .git) and robots.txt. Several traps depend on
+# them (source-leak trap + honeytokens, spider trap).
+#
+# Many Apache setups block these in the MAIN server config (outside this
+# .htaccess), e.g. a global `<FilesMatch "^\.(?!well-known)">
+# Require all denied </FilesMatch>` or a `<DirectoryMatch /\.git>` rule. Such
+# a rule runs before mod_rewrite and returns 403, so the trap never fires.
+# If /.env or /.git/config return 403, remove/relax that rule for this vhost
+# (keep /.well-known allowed for ACME/TLS) so the requests reach index.php.
+# ---------------------------------------------------------------------------
+
 # Route everything to public/index.php
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^(.*)$ public/index.php [QSA,L]
