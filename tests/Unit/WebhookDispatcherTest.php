@@ -123,7 +123,7 @@ final class WebhookDispatcherTest extends TestCase
 
     public function testAbuseIpDbMappingPassesThroughSharedCategories(): void
     {
-        // 1-23 sind bei reportedip.de und AbuseIPDB identisch
+        // 1-23 sind bei reportedip.com und AbuseIPDB identisch
         $this->t->assertEquals([16, 18], WebhookDispatcher::mapCategoriesToAbuseIpDb([16, 18]));
     }
 

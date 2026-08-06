@@ -92,7 +92,7 @@ ob_start();
                         </td>
                         <td style="font-family:var(--rip-font-mono); white-space:nowrap;">
                             <a href="<?= htmlspecialchars($admin_path, ENT_QUOTES, 'UTF-8') ?>/logs?ip=<?= urlencode($log['ip']) ?>" class="rip-link"><?= htmlspecialchars($log['ip'], ENT_QUOTES, 'UTF-8') ?></a>
-                            <a href="https://reportedip.de/ip/<?= urlencode($log['ip']) ?>/" target="_blank" rel="noopener" class="rip-ip-external" title="View on reportedip.de">&#8599;</a>
+                            <a href="https://reportedip.com/ip/<?= urlencode($log['ip']) ?>/" target="_blank" rel="noopener" class="rip-ip-external" title="View on reportedip.com">&#8599;</a>
                         </td>
                         <td><?= $categoryRegistry::formatBadges($log['categories'] ?? '') ?></td>
                         <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:var(--rip-font-size-sm);" title="<?= htmlspecialchars($log['comment'] ?? '', ENT_QUOTES, 'UTF-8') ?>">

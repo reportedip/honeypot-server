@@ -34,7 +34,28 @@ final class Config
             throw new \RuntimeException('Configuration file must return an array.');
         }
 
-        return new self($config);
+        return new self(self::migrateLegacyDomain($config));
+    }
+
+    /**
+     * Rewrite api_url entries still pointing at the legacy reportedip.de
+     * domain to reportedip.com, so existing installations report to the
+     * new domain without requiring a manual config edit.
+     *
+     * @param array<string, mixed> $config
+     * @return array<string, mixed>
+     */
+    private static function migrateLegacyDomain(array $config): array
+    {
+        if (isset($config['api_url']) && is_string($config['api_url'])) {
+            $config['api_url'] = str_replace(
+                ['://www.reportedip.de', '://reportedip.de'],
+                ['://www.reportedip.com', '://reportedip.com'],
+                $config['api_url']
+            );
+        }
+
+        return $config;
     }
 
     /**

@@ -7,7 +7,7 @@ namespace ReportedIp\Honeypot\Detection;
 /**
  * Value object representing the result of a threat detection.
  *
- * Contains the category IDs (for reportedip.de API), a human-readable
+ * Contains the category IDs (for reportedip.com API), a human-readable
  * description, a severity score, and the name of the analyzer that
  * produced the result.
  */
@@ -23,7 +23,7 @@ final readonly class DetectionResult
     public string $analyzerName;
 
     /**
-     * @param int[]  $categories   Category IDs for reportedip.de reporting.
+     * @param int[]  $categories   Category IDs for reportedip.com reporting.
      * @param string $comment      Human-readable description of the detected threat.
      * @param int    $score        Severity score from 1 (low) to 100 (critical).
      * @param string $analyzerName Name of the analyzer that produced this result.
@@ -37,7 +37,7 @@ final readonly class DetectionResult
     }
 
     /**
-     * @return int[] Category IDs for reportedip.de.
+     * @return int[] Category IDs for reportedip.com.
      */
     public function getCategories(): array
     {

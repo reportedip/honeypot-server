@@ -10,11 +10,11 @@ declare(strict_types=1);
  */
 
 return [
-    // API key for reportedip.de (64-character hex string)
+    // API key for reportedip.com (64-character hex string)
     'api_key' => '',
 
-    // reportedip.de API endpoint
-    'api_url' => 'https://reportedip.de/wp-json/reportedip/v2/report',
+    // reportedip.com API endpoint
+    'api_url' => 'https://reportedip.com/wp-json/reportedip/v2/report',
 
     // CMS profile to emulate: 'wordpress', 'drupal', or 'joomla'
     'cms_profile' => 'wordpress',

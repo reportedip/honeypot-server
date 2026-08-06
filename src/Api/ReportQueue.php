@@ -11,7 +11,7 @@ use ReportedIp\Honeypot\Persistence\Database;
  * Report queue processor.
  *
  * Reads unsent log entries from the database, sends them to the
- * reportedip.de API in batches, and marks them as sent.
+ * reportedip.com API in batches, and marks them as sent.
  */
 final class ReportQueue
 {

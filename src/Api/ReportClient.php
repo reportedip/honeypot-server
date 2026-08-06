@@ -8,7 +8,7 @@ use ReportedIp\Honeypot\Core\Config;
 use ReportedIp\Honeypot\Core\Version;
 
 /**
- * HTTP client for the reportedip.de API.
+ * HTTP client for the reportedip.com API.
  *
  * Sends IP abuse reports with automatic rate limiting and exponential
  * backoff on transient failures (429, 5xx, 408/499, connection errors).
@@ -110,7 +110,7 @@ final class ReportClient
     }
 
     /**
-     * Report an IP address to the reportedip.de API.
+     * Report an IP address to the reportedip.com API.
      *
      * @param string $ip         The IP to report.
      * @param string $categories Comma-separated category IDs.
@@ -133,7 +133,7 @@ final class ReportClient
             return false;
         }
 
-        $apiUrl = $this->config->get('api_url', 'https://reportedip.de/wp-json/reportedip/v2/report');
+        $apiUrl = $this->config->get('api_url', 'https://reportedip.com/wp-json/reportedip/v2/report');
         $apiKey = $this->config->get('api_key', '');
 
         if (empty($apiKey)) {

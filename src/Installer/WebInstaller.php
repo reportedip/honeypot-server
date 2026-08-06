@@ -115,7 +115,7 @@ class WebInstaller
 
         $configValues = [
             'api_key'             => $apiKey,
-            'api_url'             => 'https://reportedip.de/wp-json/reportedip/v2/report',
+            'api_url'             => 'https://reportedip.com/wp-json/reportedip/v2/report',
             'cms_profile'         => $cmsProfile,
             'admin_path'          => $adminPath,
             'admin_password_hash' => $passwordHash,
@@ -355,16 +355,16 @@ class WebInstaller
                     <h2>2. Configuration</h2>
 
                     <div style="background:#EEF2FF; border:1px solid #C7D2FE; color:#3730A3; padding:12px 16px; border-radius:6px; margin-bottom:20px; font-size:0.9em; line-height:1.5;">
-                        <strong>Join our community!</strong> We are looking for testers and contributors to help improve the data quality of <a href="https://reportedip.de" target="_blank" style="color:#4F46E5;">reportedip.de</a>.
+                        <strong>Join our community!</strong> We are looking for testers and contributors to help improve the data quality of <a href="https://reportedip.com" target="_blank" style="color:#4F46E5;">reportedip.com</a>.
                         Every honeypot installation helps protect the community.<br>
                         <strong>You need a Community Access Key (API key) to report attacks.</strong>
-                        Please contact <a href="mailto:1@reportedip.de" style="color:#4F46E5; font-weight:bold;">1@reportedip.de</a> to request your free key.
+                        Please contact <a href="mailto:1@reportedip.com" style="color:#4F46E5; font-weight:bold;">1@reportedip.com</a> to request your free key.
                     </div>
 
                     <div class="form-group">
                         <label for="api_key">Community Access Key</label>
                         <input type="text" id="api_key" name="api_key" value="<?php echo htmlspecialchars($values['api_key']); ?>" required placeholder="64-character hex string">
-                        <div class="hint">Don't have a key yet? Contact <a href="mailto:1@reportedip.de">1@reportedip.de</a> to get one (free).</div>
+                        <div class="hint">Don't have a key yet? Contact <a href="mailto:1@reportedip.com">1@reportedip.com</a> to get one (free).</div>
                     </div>
 
                     <div class="form-group">

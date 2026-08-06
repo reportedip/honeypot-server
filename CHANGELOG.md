@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.6] - 2026-08-06
+
+### Changed
+- **Domain migration to reportedip.com**: all links, contact addresses and the default API endpoint now point to `reportedip.com` instead of `reportedip.de` (README, installer, admin panel, CMS template footers, license/security docs, `composer.json`)
+- Default `api_url` is now `https://reportedip.com/wp-json/reportedip/v2/report`
+
+### Added
+- Automatic config migration: `Config::fromFile()` transparently rewrites an `api_url` still pointing at the legacy `reportedip.de` domain to `reportedip.com`, so existing installations report to the new domain without a manual config edit
+
 ## [1.3.5] - 2026-07-10
 
 ### Changed

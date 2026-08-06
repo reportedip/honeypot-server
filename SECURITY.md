@@ -4,7 +4,7 @@
 
 If you discover a security vulnerability in the ReportedIP Honeypot Server, please report it responsibly.
 
-**Email**: [1@reportedip.de](mailto:1@reportedip.de)
+**Email**: [1@reportedip.com](mailto:1@reportedip.com)
 
 **Please include**:
 - Description of the vulnerability

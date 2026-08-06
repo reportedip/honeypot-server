@@ -23,7 +23,7 @@ ob_start();
                 <th style="width:140px;">IP Address</th>
                 <td style="font-family:var(--rip-font-mono);">
                     <?= htmlspecialchars($entry['ip'], ENT_QUOTES, 'UTF-8') ?>
-                    <a href="https://reportedip.de/ip/<?= urlencode($entry['ip']) ?>/" target="_blank" rel="noopener" class="rip-ip-external" title="View on reportedip.de">&#8599;</a>
+                    <a href="https://reportedip.com/ip/<?= urlencode($entry['ip']) ?>/" target="_blank" rel="noopener" class="rip-ip-external" title="View on reportedip.com">&#8599;</a>
                 </td>
             </tr>
             <tr>

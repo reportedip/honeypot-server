@@ -28,7 +28,7 @@ final class WebhookDispatcher
     private const ALLOWED_METHODS = ['POST', 'PUT', 'PATCH', 'GET'];
 
     /**
-     * Mapping reportedip.de category IDs -> AbuseIPDB category IDs.
+     * Mapping reportedip.com category IDs -> AbuseIPDB category IDs.
      *
      * IDs 1-23 are identical on both platforms; the CMS-specific
      * categories 24-58 are translated to their closest equivalent.
@@ -278,7 +278,7 @@ final class WebhookDispatcher
     }
 
     /**
-     * Map reportedip.de category IDs to AbuseIPDB category IDs.
+     * Map reportedip.com category IDs to AbuseIPDB category IDs.
      *
      * IDs 1-23 pass through unchanged; CMS-specific IDs are translated;
      * unknown IDs fall back to 21 (Web App Attack).

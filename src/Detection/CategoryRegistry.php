@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace ReportedIp\Honeypot\Detection;
 
 /**
- * Registry of all reportedip.de attack category IDs.
+ * Registry of all reportedip.com attack category IDs.
  *
  * Maps numeric category IDs (used by the API) to human-readable names,
  * descriptions, and severity levels. Categories 1-30 are general security

@@ -1,6 +1,6 @@
 {
     "name": "reportedip/honeypot-server",
-    "description": "A standalone PHP honeypot server that emulates CMS installations to detect and report malicious traffic to reportedip.de",
+    "description": "A standalone PHP honeypot server that emulates CMS installations to detect and report malicious traffic to reportedip.com",
     "type": "project",
     "license": "BSL-1.1",
     "keywords": ["honeypot", "security", "threat-detection", "reportedip", "cms", "wordpress", "drupal", "joomla", "intrusion-detection", "php"],
@@ -8,8 +8,8 @@
     "authors": [
         {
             "name": "Patrick Schlesinger",
-            "email": "1@reportedip.de",
-            "homepage": "https://reportedip.de"
+            "email": "1@reportedip.com",
+            "homepage": "https://reportedip.com"
         }
     ],
     "require": {

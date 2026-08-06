@@ -77,6 +77,32 @@ final class ConfigTest extends TestCase
         }
     }
 
+    public function testFromFileMigratesLegacyApiUrlDomain(): void
+    {
+        $tmpFile = sys_get_temp_dir() . '/honeypot_test_config_legacy_' . uniqid() . '.php';
+        file_put_contents($tmpFile, '<?php return ["api_url" => "https://reportedip.de/wp-json/reportedip/v2/report"];');
+
+        try {
+            $config = Config::fromFile($tmpFile);
+            $this->t->assertEquals('https://reportedip.com/wp-json/reportedip/v2/report', $config->get('api_url'));
+        } finally {
+            @unlink($tmpFile);
+        }
+    }
+
+    public function testFromFileKeepsCurrentApiUrlDomain(): void
+    {
+        $tmpFile = sys_get_temp_dir() . '/honeypot_test_config_current_' . uniqid() . '.php';
+        file_put_contents($tmpFile, '<?php return ["api_url" => "https://reportedip.com/wp-json/reportedip/v2/report"];');
+
+        try {
+            $config = Config::fromFile($tmpFile);
+            $this->t->assertEquals('https://reportedip.com/wp-json/reportedip/v2/report', $config->get('api_url'));
+        } finally {
+            @unlink($tmpFile);
+        }
+    }
+
     public function testFromFileThrowsOnNonArrayReturn(): void
     {
         $tmpFile = sys_get_temp_dir() . '/honeypot_test_config_bad_' . uniqid() . '.php';

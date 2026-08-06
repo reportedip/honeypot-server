@@ -40,8 +40,8 @@ ob_start();
 
 <?php if (!($system['api_configured'] ?? false)): ?>
 <div class="rip-alert rip-alert--warning">
-    <strong>No Community Access Key configured.</strong> Without an API key, detected attacks are logged locally but not reported to the <a href="https://reportedip.de" target="_blank" rel="noopener" style="color:var(--rip-warning-text); text-decoration:underline;">reportedip.de</a> community database.<br>
-    To get your free API key, please contact <a href="mailto:1@reportedip.de" style="color:var(--rip-warning-text); font-weight:700; text-decoration:underline;">1@reportedip.de</a> &mdash; we're looking for testers and community members to help improve detection coverage.
+    <strong>No Community Access Key configured.</strong> Without an API key, detected attacks are logged locally but not reported to the <a href="https://reportedip.com" target="_blank" rel="noopener" style="color:var(--rip-warning-text); text-decoration:underline;">reportedip.com</a> community database.<br>
+    To get your free API key, please contact <a href="mailto:1@reportedip.com" style="color:var(--rip-warning-text); font-weight:700; text-decoration:underline;">1@reportedip.com</a> &mdash; we're looking for testers and community members to help improve detection coverage.
 </div>
 <?php endif; ?>
 
@@ -353,7 +353,7 @@ ob_start();
                             <a href="<?= $base ?>/logs?ip=<?= urlencode($row['ip']) ?>" class="rip-link" style="font-family:var(--rip-font-mono); font-size:var(--rip-font-size-sm);">
                                 <?= htmlspecialchars($row['ip'], ENT_QUOTES, 'UTF-8') ?>
                             </a>
-                            <a href="https://reportedip.de/ip/<?= urlencode($row['ip']) ?>/" target="_blank" rel="noopener" class="rip-ip-external" title="View on reportedip.de">&#8599;</a>
+                            <a href="https://reportedip.com/ip/<?= urlencode($row['ip']) ?>/" target="_blank" rel="noopener" class="rip-ip-external" title="View on reportedip.com">&#8599;</a>
                         </td>
                         <td style="text-align:right; font-weight:600;"><?= number_format((int)$row['cnt']) ?></td>
                     </tr>
@@ -473,7 +473,7 @@ ob_start();
                     <tr>
                         <td style="font-family:var(--rip-font-mono); white-space:nowrap;">
                             <a href="<?= $base ?>/logs?ip=<?= urlencode($log['ip']) ?>" class="rip-link"><?= htmlspecialchars($log['ip'], ENT_QUOTES, 'UTF-8') ?></a>
-                            <a href="https://reportedip.de/ip/<?= urlencode($log['ip']) ?>/" target="_blank" rel="noopener" class="rip-ip-external" title="View on reportedip.de">&#8599;</a>
+                            <a href="https://reportedip.com/ip/<?= urlencode($log['ip']) ?>/" target="_blank" rel="noopener" class="rip-ip-external" title="View on reportedip.com">&#8599;</a>
                         </td>
                         <td><?= $categoryRegistry::formatBadges($log['categories'] ?? '') ?></td>
                         <td style="max-width:250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="<?= htmlspecialchars($log['request_uri'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
@@ -602,7 +602,7 @@ ob_start();
                             <td style="white-space:nowrap; font-size:var(--rip-font-size-xs); color:var(--rip-gray-500);"><?= htmlspecialchars((string) ($f['last_failure_at'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
                             <td style="font-family:var(--rip-font-mono); white-space:nowrap;">
                                 <a href="<?= $base ?>/logs?ip=<?= urlencode((string) $f['ip']) ?>" class="rip-link"><?= htmlspecialchars((string) $f['ip'], ENT_QUOTES, 'UTF-8') ?></a>
-                                <a href="https://reportedip.de/ip/<?= urlencode((string) $f['ip']) ?>/" target="_blank" rel="noopener" class="rip-ip-external" title="View on reportedip.de">&#8599;</a>
+                                <a href="https://reportedip.com/ip/<?= urlencode((string) $f['ip']) ?>/" target="_blank" rel="noopener" class="rip-ip-external" title="View on reportedip.com">&#8599;</a>
                             </td>
                             <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="<?= htmlspecialchars((string) ($f['request_uri'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
                                 <?= htmlspecialchars((string) ($f['request_uri'] ?? ''), ENT_QUOTES, 'UTF-8') ?>
@@ -635,7 +635,7 @@ ob_start();
             <?php if ($queueMode === 'web'): ?>
                 Web cron mode is active. The queue is processed automatically during page visits.
             <?php else: ?>
-                The cron job has not run yet. Set it up to automatically send pending reports to the reportedip.de API.
+                The cron job has not run yet. Set it up to automatically send pending reports to the reportedip.com API.
             <?php endif; ?>
         </div>
     <?php endif; ?>
