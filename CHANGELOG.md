@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.8] - 2026-08-31
+
+### Removed
+- **Dead code sweep (~590 lines)** following a repo-wide over-engineering audit; no functional changes:
+  - `Core\Cache` and its test — the file-based TTL cache was never instantiated anywhere
+  - `App::serveTrapFallback()` and `fallbackLoginPage()` — an unreachable template-rendering fallback for the case that trap classes "are not available"; all traps ship in this repository
+  - `CmsProfile::getAdminPath()` / `getApiPaths()` abstract methods and their three implementations — declared but never called
+  - `ProfileFactory` — single caller; the profile match now lives directly in `App::loadProfile()`
+  - `Request::toArray()` and `Config::has()` — only referenced by their own tests
+  - Unused config keys `cache_path`, `cache_ttl`, `debug`, `session_lifetime`, `log_human_visitors` (written by the installer, read by nothing; existing configs keep working — unknown keys are simply ignored)
+  - `data/cache/` directory scaffolding (`.gitkeep`, Dockerfile `mkdir`, ignore entries)
+
+### Changed
+- `Router::route()` now emits the registered trap names directly (`fake_vuln`, `rest_api`, `registration`, ...) instead of intermediate names that `App::serveTrap()` re-mapped a second time; the unreachable honeypot-admin branch in `route()` is gone (the admin panel is intercepted via `isAdminPath()` before routing, as before)
+- `App::registerTraps()` and `App::handleAdmin()` instantiate their classes directly instead of going through string class names with `class_exists()` guards
+- CSRF token lifetime is now tied to `AdminAuth::SESSION_LIFETIME` (single source) instead of the half-wired `session_lifetime` config key
+- Admin dashboard reads the app version via `Version::current()` instead of re-reading the `VERSION` file by hand
+
 ## [1.3.7] - 2026-08-30
 
 ### Fixed

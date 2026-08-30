@@ -28,12 +28,6 @@ return [
     // SQLite database path
     'db_path' => __DIR__ . '/../data/honeypot.sqlite',
 
-    // File cache directory
-    'cache_path' => __DIR__ . '/../data/cache',
-
-    // Cache TTL in seconds
-    'cache_ttl' => 3600,
-
     // Max log entries per IP per minute (prevents log flooding)
     'rate_limit_per_ip' => 10,
 
@@ -80,17 +74,8 @@ return [
         '2c0f:f248::/32',
     ],
 
-    // Enable debug mode (verbose error output)
-    'debug' => false,
-
     // Number of days to keep log entries
     'log_retention_days' => 90,
-
-    // Admin session lifetime in seconds (default 1 hour)
-    'session_lifetime' => 3600,
-
-    // Log human visitors (non-bot, non-attacker traffic)
-    'log_human_visitors' => true,
 
     // Tarpit: delay the response on time-based blind SQL injection payloads
     // (SLEEP, pg_sleep, BENCHMARK, WAITFOR DELAY) so the attacker's tool

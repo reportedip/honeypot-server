@@ -21,21 +21,6 @@ class JoomlaProfile extends CmsProfile
         return '/administrator';
     }
 
-    public function getAdminPath(): string
-    {
-        return '/administrator/';
-    }
-
-    /**
-     * @return string[]
-     */
-    public function getApiPaths(): array
-    {
-        return [
-            '/api/',
-        ];
-    }
-
     /**
      * @return array<string, string>
      */

@@ -120,8 +120,6 @@ class WebInstaller
             'admin_path'          => $adminPath,
             'admin_password_hash' => $passwordHash,
             'db_path'             => "__DIR__ . '/../data/honeypot.sqlite'",
-            'cache_path'          => "__DIR__ . '/../data/cache'",
-            'cache_ttl'           => 3600,
             'rate_limit_per_ip'   => 10,
             'category_cooldown_minutes' => 15,
             'report_rate_limit'   => 60,
@@ -138,10 +136,7 @@ class WebInstaller
                 '2405:b500::/32', '2405:8100::/32', '2a06:98c0::/29',
                 '2c0f:f248::/32',
             ],
-            'debug'               => false,
             'log_retention_days'  => 90,
-            'session_lifetime'    => 3600,
-            'log_human_visitors'  => true,
             'ca_bundle'           => '',
             'openai_api_key'      => $openaiKey,
             'openai_base_url'     => $openaiBaseUrl,
@@ -166,7 +161,7 @@ class WebInstaller
                 $lines[] = "";
                 $lines[] = "    // AI Content Generation";
             }
-            if ($key === 'db_path' || $key === 'cache_path') {
+            if ($key === 'db_path') {
                 // Expression values (not string literals)
                 $lines[] = "    '{$key}' => {$value},";
             } elseif (is_array($value)) {

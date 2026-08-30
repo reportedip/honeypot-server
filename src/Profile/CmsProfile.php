@@ -54,18 +54,6 @@ abstract class CmsProfile
     abstract public function getLoginPath(): string;
 
     /**
-     * Get the admin area base path.
-     */
-    abstract public function getAdminPath(): string;
-
-    /**
-     * Get paths that expose API endpoints.
-     *
-     * @return string[]
-     */
-    abstract public function getApiPaths(): array;
-
-    /**
      * Get default HTTP headers to include in every response.
      *
      * @return array<string, string>

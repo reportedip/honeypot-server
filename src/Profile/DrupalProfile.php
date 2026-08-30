@@ -21,21 +21,6 @@ class DrupalProfile extends CmsProfile
         return '/user/login';
     }
 
-    public function getAdminPath(): string
-    {
-        return '/admin/';
-    }
-
-    /**
-     * @return string[]
-     */
-    public function getApiPaths(): array
-    {
-        return [
-            '/jsonapi/',
-        ];
-    }
-
     /**
      * @return array<string, string>
      */

@@ -157,30 +157,6 @@ final class RequestTest extends TestCase
         $this->t->assertEquals('application/json', $request->getContentType());
     }
 
-    public function testToArray(): void
-    {
-        $request = $this->createRequest([
-            'uri'    => '/wp-login.php',
-            'method' => 'POST',
-            'ip'     => '10.0.0.1',
-        ]);
-        $arr = $request->toArray();
-        $this->t->assertArrayHasKey('uri', $arr);
-        $this->t->assertArrayHasKey('path', $arr);
-        $this->t->assertArrayHasKey('method', $arr);
-        $this->t->assertArrayHasKey('ip', $arr);
-        $this->t->assertEquals('/wp-login.php', $arr['uri']);
-        $this->t->assertEquals('POST', $arr['method']);
-    }
-
-    public function testToArrayTruncatesLongBody(): void
-    {
-        $longBody = str_repeat('A', 600);
-        $request = $this->createRequest(['body' => $longBody]);
-        $arr = $request->toArray();
-        $this->t->assertContains('[truncated]', $arr['body']);
-    }
-
     public function testGetServerParam(): void
     {
         $request = $this->createRequest(['ip' => '1.2.3.4']);

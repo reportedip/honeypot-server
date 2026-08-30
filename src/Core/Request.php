@@ -237,31 +237,6 @@ final class Request
     }
 
     /**
-     * Convert request to an array suitable for logging.
-     *
-     * @return array<string, mixed>
-     */
-    public function toArray(): array
-    {
-        $bodySnippet = $this->body;
-        if (strlen($bodySnippet) > 500) {
-            $bodySnippet = substr($bodySnippet, 0, 500) . '...[truncated]';
-        }
-
-        return [
-            'uri'        => $this->uri,
-            'path'       => $this->getPath(),
-            'method'     => $this->method,
-            'headers'    => $this->headers,
-            'body'       => $bodySnippet,
-            'user_agent' => $this->getUserAgent(),
-            'ip'         => $this->ip,
-            'post_data'  => $this->postData,
-            'query'      => $this->queryParams,
-        ];
-    }
-
-    /**
      * Extract HTTP headers from $_SERVER array.
      *
      * @param array<string, mixed> $server

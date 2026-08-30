@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ReportedIp\Honeypot\Admin;
 
 use ReportedIp\Honeypot\Core\Config;
+use ReportedIp\Honeypot\Core\Version;
 use ReportedIp\Honeypot\Detection\CategoryRegistry;
 use ReportedIp\Honeypot\Persistence\Database;
 use ReportedIp\Honeypot\Persistence\Logger;
@@ -229,12 +230,10 @@ final class Dashboard
             'api_configured' => !empty($this->config->get('api_key', '')),
             'db_size'       => $this->formatBytes($dbSize !== false ? $dbSize : 0),
             'db_size_raw'   => $dbSize !== false ? $dbSize : 0,
-            'cache_path'    => $this->config->get('cache_path', ''),
             'queue_mode'    => (string) $this->config->get('queue_mode', 'web'),
-            'debug_mode'    => (bool) $this->config->get('debug', false),
             'retention_days' => (int) $this->config->get('log_retention_days', 90),
             'server_time'   => date('Y-m-d H:i:s'),
-            'app_version'   => trim(@file_get_contents(dirname(__DIR__, 2) . '/VERSION') ?: 'unknown'),
+            'app_version'   => Version::current(),
         ];
     }
 

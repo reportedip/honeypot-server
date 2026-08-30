@@ -1031,9 +1031,8 @@ final class AdminController
             return false;
         }
 
-        // Token expires after session lifetime (default 1 hour)
-        $csrfLifetime = (int) $this->config->get('session_lifetime', 3600);
-        if (isset($_SESSION['csrf_time']) && $_SESSION['csrf_time'] < time() - $csrfLifetime) {
+        // Token expires after the admin session lifetime
+        if (isset($_SESSION['csrf_time']) && $_SESSION['csrf_time'] < time() - AdminAuth::SESSION_LIFETIME) {
             unset($_SESSION['csrf_token'], $_SESSION['csrf_time']);
             return false;
         }

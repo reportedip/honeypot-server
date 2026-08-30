@@ -30,11 +30,6 @@ final class Router
         $path = $request->getPath();
         $method = $request->getMethod();
 
-        // Check honeypot admin panel path first
-        if ($this->isAdminPath($request)) {
-            return ['trap' => 'admin', 'params' => []];
-        }
-
         // Cross-CMS bait paths (source leaks, DB-admin panels, info endpoints,
         // webshells) are handled before the profile so they behave identically
         // regardless of the emulated CMS.
@@ -46,15 +41,16 @@ final class Router
         // Delegate to the CMS profile's route matching
         $routeType = $this->profile->matchRoute($path, $method, $request->getQueryParams());
 
+        // Trap names match TrapInterface::getName() of the registered traps.
         return match ($routeType) {
             'login'    => ['trap' => 'login', 'params' => []],
-            'admin'    => ['trap' => 'cms_admin', 'params' => []],
-            'api'      => ['trap' => 'api', 'params' => []],
+            'admin'    => ['trap' => 'admin', 'params' => []],
+            'api'      => ['trap' => 'rest_api', 'params' => []],
             'xmlrpc'   => ['trap' => 'xmlrpc', 'params' => []],
-            'vuln'     => ['trap' => 'vulnerability', 'params' => ['path' => $path]],
+            'vuln'     => ['trap' => 'fake_vuln', 'params' => ['path' => $path]],
             'comment'  => ['trap' => 'comment', 'params' => []],
             'search'   => ['trap' => 'search', 'params' => ['query' => $request->getQueryParam('s') ?? '']],
-            'register' => ['trap' => 'register', 'params' => []],
+            'register' => ['trap' => 'registration', 'params' => []],
             'contact'  => ['trap' => 'contact', 'params' => []],
             'home'     => ['trap' => 'home', 'params' => []],
             'misc'     => ['trap' => 'misc', 'params' => ['path' => $path]],

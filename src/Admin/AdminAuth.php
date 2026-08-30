@@ -16,7 +16,7 @@ use ReportedIp\Honeypot\Core\Request;
 final class AdminAuth
 {
     private const SESSION_KEY = 'hp_admin_auth';
-    private const SESSION_LIFETIME = 3600; // 1 hour
+    public const SESSION_LIFETIME = 3600; // 1 hour
     private const COOKIE_NAME = 'hp_session';
     private const MAX_LOGIN_ATTEMPTS = 5;
     private const LOCKOUT_WINDOW = 900; // 15 minutes

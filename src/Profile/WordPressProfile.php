@@ -21,22 +21,6 @@ class WordPressProfile extends CmsProfile
         return '/wp-login.php';
     }
 
-    public function getAdminPath(): string
-    {
-        return '/wp-admin/';
-    }
-
-    /**
-     * @return string[]
-     */
-    public function getApiPaths(): array
-    {
-        return [
-            '/wp-json/',
-            '/xmlrpc.php',
-        ];
-    }
-
     /**
      * @return array<string, string>
      */

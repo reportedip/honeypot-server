@@ -38,14 +38,14 @@ final class RouterTest extends TestCase
     {
         $request = $this->createRequest(['uri' => '/wp-json/wp/v2/posts']);
         $result = $this->router->route($request);
-        $this->t->assertEquals('api', $result['trap']);
+        $this->t->assertEquals('rest_api', $result['trap']);
     }
 
     public function testRouteAdmin(): void
     {
         $request = $this->createRequest(['uri' => '/wp-admin/']);
         $result = $this->router->route($request);
-        $this->t->assertEquals('cms_admin', $result['trap']);
+        $this->t->assertEquals('admin', $result['trap']);
     }
 
     public function testRouteComment(): void
@@ -73,20 +73,6 @@ final class RouterTest extends TestCase
         $this->t->assertEquals('not_found', $result['trap']);
     }
 
-    public function testRouteHoneypotAdminPanel(): void
-    {
-        $request = $this->createRequest(['uri' => '/_hp_admin']);
-        $result = $this->router->route($request);
-        $this->t->assertEquals('admin', $result['trap']);
-    }
-
-    public function testRouteHoneypotAdminSubpath(): void
-    {
-        $request = $this->createRequest(['uri' => '/_hp_admin/logs']);
-        $result = $this->router->route($request);
-        $this->t->assertEquals('admin', $result['trap']);
-    }
-
     public function testIsAdminPath(): void
     {
         $request = $this->createRequest(['uri' => '/_hp_admin']);
@@ -107,7 +93,7 @@ final class RouterTest extends TestCase
     {
         $request = $this->createRequest(['uri' => '/wp-content/plugins/revslider/']);
         $result = $this->router->route($request);
-        $this->t->assertEquals('vulnerability', $result['trap']);
+        $this->t->assertEquals('fake_vuln', $result['trap']);
         $this->t->assertArrayHasKey('path', $result['params']);
     }
 }

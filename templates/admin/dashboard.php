@@ -743,10 +743,6 @@ Register-ScheduledTask -TaskName "HoneypotQueue" -Action $action -Trigger $trigg
             <div class="rip-kv__val"><?= htmlspecialchars($system['db_size'] ?? '0 B', ENT_QUOTES, 'UTF-8') ?></div>
         </div>
         <div>
-            <div class="rip-kv__key">Debug Mode</div>
-            <div class="rip-kv__val"><?= ($system['debug_mode'] ?? false) ? '<span style="color:var(--rip-warning);">On</span>' : 'Off' ?></div>
-        </div>
-        <div>
             <div class="rip-kv__key">Log Retention</div>
             <div class="rip-kv__val"><?= (int)($system['retention_days'] ?? 90) ?> days</div>
         </div>

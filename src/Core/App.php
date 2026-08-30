@@ -12,9 +12,13 @@ use ReportedIp\Honeypot\Persistence\Database;
 use ReportedIp\Honeypot\Persistence\Logger;
 use ReportedIp\Honeypot\Persistence\VisitorLogger;
 use ReportedIp\Honeypot\Persistence\Whitelist;
+use ReportedIp\Honeypot\Admin\AdminController;
 use ReportedIp\Honeypot\Profile\CmsProfile;
-use ReportedIp\Honeypot\Profile\ProfileFactory;
+use ReportedIp\Honeypot\Profile\DrupalProfile;
+use ReportedIp\Honeypot\Profile\JoomlaProfile;
+use ReportedIp\Honeypot\Profile\WordPressProfile;
 use ReportedIp\Honeypot\Api\WebCronProcessor;
+use ReportedIp\Honeypot\Trap;
 use ReportedIp\Honeypot\Trap\DatabaseAwareInterface;
 use ReportedIp\Honeypot\Trap\TrapInterface;
 
@@ -269,11 +273,18 @@ final class App
     }
 
     /**
-     * Load the CMS profile based on configuration.
+     * Load the CMS profile based on configuration (falls back to WordPress).
      */
     private function loadProfile(string $profileName): CmsProfile
     {
-        return ProfileFactory::create($profileName, $this->config->all());
+        $profile = match (strtolower(trim($profileName))) {
+            'drupal' => new DrupalProfile(),
+            'joomla' => new JoomlaProfile(),
+            default  => new WordPressProfile(),
+        };
+        $profile->setConfig($this->config->all());
+
+        return $profile;
     }
 
     /**
@@ -281,35 +292,31 @@ final class App
      */
     private function registerTraps(): void
     {
-        $trapClasses = [
-            'ReportedIp\\Honeypot\\Trap\\ContentTrap',
-            'ReportedIp\\Honeypot\\Trap\\LoginTrap',
-            'ReportedIp\\Honeypot\\Trap\\AdminTrap',
-            'ReportedIp\\Honeypot\\Trap\\RestApiTrap',
-            'ReportedIp\\Honeypot\\Trap\\XmlRpcTrap',
-            'ReportedIp\\Honeypot\\Trap\\FakeVulnTrap',
-            'ReportedIp\\Honeypot\\Trap\\CommentTrap',
-            'ReportedIp\\Honeypot\\Trap\\SearchTrap',
-            'ReportedIp\\Honeypot\\Trap\\RegistrationTrap',
-            'ReportedIp\\Honeypot\\Trap\\ContactFormTrap',
-            'ReportedIp\\Honeypot\\Trap\\HomeTrap',
-            'ReportedIp\\Honeypot\\Trap\\NotFoundTrap',
-            'ReportedIp\\Honeypot\\Trap\\MiscTrap',
-            'ReportedIp\\Honeypot\\Trap\\SourceLeakTrap',
-            'ReportedIp\\Honeypot\\Trap\\DbAdminTrap',
-            'ReportedIp\\Honeypot\\Trap\\SystemInfoTrap',
-            'ReportedIp\\Honeypot\\Trap\\WebshellTrap',
+        $traps = [
+            new Trap\ContentTrap(),
+            new Trap\LoginTrap(),
+            new Trap\AdminTrap(),
+            new Trap\RestApiTrap(),
+            new Trap\XmlRpcTrap(),
+            new Trap\FakeVulnTrap(),
+            new Trap\CommentTrap(),
+            new Trap\SearchTrap(),
+            new Trap\RegistrationTrap(),
+            new Trap\ContactFormTrap(),
+            new Trap\HomeTrap(),
+            new Trap\NotFoundTrap(),
+            new Trap\MiscTrap(),
+            new Trap\SourceLeakTrap(),
+            new Trap\DbAdminTrap(),
+            new Trap\SystemInfoTrap(),
+            new Trap\WebshellTrap(),
         ];
 
-        foreach ($trapClasses as $className) {
-            if (class_exists($className)) {
-                /** @var TrapInterface $trap */
-                $trap = new $className();
-                if ($trap instanceof DatabaseAwareInterface) {
-                    $trap->setDatabase($this->db);
-                }
-                $this->traps[$trap->getName()] = $trap;
+        foreach ($traps as $trap) {
+            if ($trap instanceof DatabaseAwareInterface) {
+                $trap->setDatabase($this->db);
             }
+            $this->traps[$trap->getName()] = $trap;
         }
     }
 
@@ -321,107 +328,8 @@ final class App
         $route = $router->route($request);
         $response = new Response();
 
-        // Map route trap names to Trap class names
-        $trapMapping = [
-            'content'       => 'content',
-            'login'         => 'login',
-            'cms_admin'     => 'admin',
-            'api'           => 'rest_api',
-            'xmlrpc'        => 'xmlrpc',
-            'vulnerability' => 'fake_vuln',
-            'comment'       => 'comment',
-            'search'        => 'search',
-            'register'      => 'registration',
-            'contact'       => 'contact',
-            'home'          => 'home',
-            'not_found'     => 'not_found',
-            'misc'          => 'misc',
-        ];
-
-        $trapName = $trapMapping[$route['trap']] ?? $route['trap'];
-
-        // Try to use a registered Trap class
-        if (isset($this->traps[$trapName])) {
-            $response = $this->traps[$trapName]->handle($request, $response, $this->profile);
-            $response->send();
-            return;
-        }
-
-        // Fallback: template-based rendering
-        $this->serveTrapFallback($request, $response, $route);
-    }
-
-    /**
-     * Fallback trap serving using direct template rendering.
-     *
-     * Used when Trap classes are not available.
-     */
-    private function serveTrapFallback(Request $request, Response $response, array $route): void
-    {
-        // Set CMS-specific default headers
-        foreach ($this->profile->getDefaultHeaders() as $name => $value) {
-            $response->setHeader($name, $value);
-        }
-
-        $templateDir = __DIR__ . '/../../templates/' . $this->profile->getTemplatePath();
-        $templateData = array_merge($this->profile->getTemplateData(), [
-            'request' => $request,
-            'config'  => $this->config,
-        ]);
-
-        switch ($route['trap']) {
-            case 'login':
-                $response->setContentType('text/html; charset=utf-8');
-                $templateFile = $templateDir . '/login.php';
-                if (file_exists($templateFile)) {
-                    $response->renderTemplate($templateFile, $templateData);
-                } else {
-                    $response->setBody($this->fallbackLoginPage());
-                }
-                break;
-
-            case 'cms_admin':
-                $response->redirect($this->profile->getLoginPath() . '?redirect_to=' . urlencode($request->getUri()));
-                break;
-
-            case 'api':
-                $response->json([
-                    'name'        => 'My Site',
-                    'description' => 'Just another site',
-                    'url'         => '',
-                    'namespaces'  => ['wp/v2', 'oembed/1.0'],
-                ]);
-                break;
-
-            case 'xmlrpc':
-                $response->setContentType('text/xml; charset=utf-8');
-                $response->setBody(
-                    '<?xml version="1.0" encoding="UTF-8"?>'
-                    . '<methodResponse><params><param><value>'
-                    . '<array><data><value><string>blogger.getUsersBlogs</string></value>'
-                    . '</data></array></value></param></params></methodResponse>'
-                );
-                break;
-
-            case 'home':
-                $response->setContentType('text/html; charset=utf-8');
-                $templateFile = $templateDir . '/home.php';
-                if (file_exists($templateFile)) {
-                    $response->renderTemplate($templateFile, $templateData);
-                } else {
-                    $response->setBody($this->fallbackLoginPage());
-                }
-                break;
-
-            case 'not_found':
-            default:
-                $response->setStatusCode(404);
-                $response->setContentType('text/html; charset=utf-8');
-                $response->setBody('<html><body><h1>404 Not Found</h1></body></html>');
-                break;
-        }
-
-        $response->send();
+        $trap = $this->traps[$route['trap']] ?? $this->traps['not_found'];
+        $trap->handle($request, $response, $this->profile)->send();
     }
 
     /**
@@ -429,20 +337,8 @@ final class App
      */
     private function handleAdmin(Request $request): void
     {
-        // Dynamic loading of AdminController if available
-        $controllerClass = 'ReportedIp\\Honeypot\\Admin\\AdminController';
-        if (class_exists($controllerClass)) {
-            $controller = new $controllerClass($this->config, $this->db, $this->logger, $this->whitelist);
-            $controller->handle($request);
-            return;
-        }
-
-        // Fallback: basic admin panel not yet available
-        $response = new Response();
-        $response->setStatusCode(503);
-        $response->setContentType('text/html; charset=utf-8');
-        $response->setBody('<html><body><h1>Admin Panel</h1><p>Admin module not installed.</p></body></html>');
-        $response->send();
+        $controller = new AdminController($this->config, $this->db, $this->logger, $this->whitelist);
+        $controller->handle($request);
     }
 
     /**
@@ -521,15 +417,4 @@ final class App
         }
     }
 
-    /**
-     * Fallback login page when no template or trap class is available.
-     */
-    private function fallbackLoginPage(): string
-    {
-        return '<!DOCTYPE html><html><head><title>Log In</title></head>'
-            . '<body><h1>Log In</h1>'
-            . '<form method="post"><label>Username<br><input type="text" name="log"></label><br>'
-            . '<label>Password<br><input type="password" name="pwd"></label><br>'
-            . '<button type="submit">Log In</button></form></body></html>';
-    }
 }

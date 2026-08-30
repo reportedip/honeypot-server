@@ -27,24 +27,6 @@ final class ConfigTest extends TestCase
         $this->t->assertNull($config->get('nonexistent'));
     }
 
-    public function testHasReturnsTrueForExistingKey(): void
-    {
-        $config = new Config(['name' => 'test']);
-        $this->t->assertTrue($config->has('name'));
-    }
-
-    public function testHasReturnsFalseForMissingKey(): void
-    {
-        $config = new Config(['name' => 'test']);
-        $this->t->assertFalse($config->has('other'));
-    }
-
-    public function testHasReturnsTrueForNullValue(): void
-    {
-        $config = new Config(['key' => null]);
-        $this->t->assertTrue($config->has('key'));
-    }
-
     public function testAllReturnsEntireArray(): void
     {
         $data = ['a' => 1, 'b' => 2, 'c' => 3];

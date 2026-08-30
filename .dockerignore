@@ -38,7 +38,6 @@ config/config.php
 data/honeypot.sqlite
 data/honeypot.sqlite-shm
 data/honeypot.sqlite-wal
-data/cache
 data/api_errors.log
 data/cron_status.json
 data/login_attempts.json

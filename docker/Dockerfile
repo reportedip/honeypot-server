@@ -9,7 +9,7 @@ COPY docker/php-fpm.conf /usr/local/etc/php-fpm.d/zz-custom.conf
 COPY . /var/www/honeypot
 WORKDIR /var/www/honeypot
 
-RUN mkdir -p data/cache \
+RUN mkdir -p data \
     && chown -R www-data:www-data data/ \
     && chmod -R 775 data/
 
