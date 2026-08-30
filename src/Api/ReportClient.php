@@ -23,6 +23,17 @@ final class ReportClient
     private const BASE_BACKOFF_SECONDS = 5;
     private const MAX_BACKOFF_SECONDS = 300;
 
+    /**
+     * Highest category ID every reportedip.com deployment is known to accept.
+     *
+     * The API validates each reported ID against its own catalogue and rejects
+     * the ENTIRE report with HTTP 400 (`rest_invalid_param`) as soon as one ID
+     * is unknown to it — so a single honeypot-only category (59-63, added with
+     * the high-interaction traps) used to drop the whole detection. IDs up to
+     * this bound have existed since API v2 and are safe as a retry payload.
+     */
+    private const CORE_CATEGORY_MAX = 58;
+
     private Config $config;
 
     /** @var int[] Timestamps of recent requests for rate limiting */
@@ -68,6 +79,56 @@ final class ReportClient
     {
         return $this->lastHttpCode !== null
             && self::isPermanentRejectionCode($this->lastHttpCode);
+    }
+
+    /**
+     * Detect the API's "unknown category" rejection.
+     *
+     * WordPress answers a failed `validate_callback` with HTTP 400,
+     * `code: rest_invalid_param` and the offending parameter name in the message.
+     * Only that exact shape warrants a retry with a reduced payload — an
+     * invalid key (403) or a malformed IP must not silently be resent.
+     */
+    public static function isInvalidCategoryRejection(int $httpCode, string $responseBody): bool
+    {
+        if ($httpCode !== 400) {
+            return false;
+        }
+
+        if (stripos($responseBody, 'rest_invalid_param') === false) {
+            return false;
+        }
+
+        return stripos($responseBody, 'categories') !== false;
+    }
+
+    /**
+     * Reduce a category list to the IDs every API deployment accepts.
+     *
+     * Used as the retry payload after an "unknown category" rejection: the
+     * detection is still reported, just without the categories this API does
+     * not know yet. Returns an empty string when nothing is left — there is
+     * then no point in retrying.
+     */
+    public static function stripUnsupportedCategories(string $categories): string
+    {
+        $kept = [];
+
+        foreach (explode(',', $categories) as $raw) {
+            $raw = trim($raw);
+
+            if ($raw === '' || !ctype_digit($raw)) {
+                continue;
+            }
+
+            $id = (int) $raw;
+
+            if ($id >= 1 && $id <= self::CORE_CATEGORY_MAX) {
+                $kept[] = $id;
+            }
+        }
+
+        return implode(',', array_unique($kept));
     }
 
     /**
@@ -142,6 +203,24 @@ final class ReportClient
             return false;
         }
 
+        return $this->send($apiUrl, $apiKey, $ip, $categories, $comment, true);
+    }
+
+    /**
+     * Perform a single report request and evaluate the response.
+     *
+     * @param bool $allowCategoryRetry Whether an "unknown category" rejection
+     *                                 may be retried once without the
+     *                                 categories this API does not know.
+     */
+    private function send(
+        string $apiUrl,
+        string $apiKey,
+        string $ip,
+        string $categories,
+        string $comment,
+        bool $allowCategoryRetry
+    ): bool {
         $postFields = http_build_query([
             'ip'         => $ip,
             'categories' => $categories,
@@ -207,6 +286,26 @@ final class ReportClient
         if ($httpCode >= 200 && $httpCode < 300) {
             $this->resetBackoff();
             return true;
+        }
+
+        // An API that does not know one of the reported categories rejects the
+        // WHOLE report (HTTP 400, rest_invalid_param) — and the queue treats
+        // 4xx as final, so the detection would be lost. Retry once with only
+        // the categories every deployment accepts; better a report with fewer
+        // categories than none at all.
+        if ($allowCategoryRetry && self::isInvalidCategoryRejection($httpCode, (string) $response)) {
+            $reduced = self::stripUnsupportedCategories($categories);
+
+            if ($reduced !== '' && $reduced !== $categories && !$this->isRateLimited()) {
+                $this->logApiError(
+                    $ip,
+                    $httpCode,
+                    sprintf('Unknown categories rejected, retrying with %s', $reduced),
+                    (string) $response
+                );
+
+                return $this->send($apiUrl, $apiKey, $ip, $reduced, $comment, false);
+            }
         }
 
         // Log all other errors

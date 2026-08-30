@@ -201,6 +201,43 @@ final class ReportClientTest extends TestCase
         $this->t->assertTrue($version !== '', 'VERSION file must not be empty');
     }
 
+    public function testDetectsInvalidCategoryRejection(): void
+    {
+        $body = '{"code":"rest_invalid_param","message":"Invalid parameter(s): categories",'
+              . '"data":{"status":400,"params":{"categories":"categories is not of type string."}}}';
+
+        // Genau die Antwort, die eine API ohne die Honeypot-Kategorien liefert
+        $this->t->assertTrue(ReportClient::isInvalidCategoryRejection(400, $body));
+        // Anderer Parameter -> kein Kategorie-Problem, kein Retry
+        $this->t->assertFalse(ReportClient::isInvalidCategoryRejection(
+            400,
+            '{"code":"rest_invalid_param","message":"Invalid parameter(s): ip"}'
+        ));
+        // Anderer Fehlercode (z. B. ungültiger Key) -> kein Retry
+        $this->t->assertFalse(ReportClient::isInvalidCategoryRejection(
+            403,
+            '{"code":"rest_forbidden","message":"Invalid API key"}'
+        ));
+        // Erfolg
+        $this->t->assertFalse(ReportClient::isInvalidCategoryRejection(200, '{"success":true}'));
+    }
+
+    public function testStripUnsupportedCategoriesKeepsCoreRange(): void
+    {
+        // Kategorien jenseits der Kern-Range fliegen raus, Reihenfolge bleibt
+        $this->t->assertEquals('14,15,19,21,49', ReportClient::stripUnsupportedCategories('14,15,19,21,49,61'));
+        $this->t->assertEquals('15,18,46', ReportClient::stripUnsupportedCategories('15,18,46,59'));
+        // Kern-Kategorien bleiben unverändert
+        $this->t->assertEquals('16,18', ReportClient::stripUnsupportedCategories('16,18'));
+        // Whitespace und leere Felder werden normalisiert
+        $this->t->assertEquals('16,18', ReportClient::stripUnsupportedCategories(' 16 , ,18 '));
+        // Ohne verbleibende Kategorie bleibt nichts uebrig -> kein Retry moeglich
+        $this->t->assertEquals('', ReportClient::stripUnsupportedCategories('59,63'));
+        $this->t->assertEquals('', ReportClient::stripUnsupportedCategories(''));
+        // Unsinnige Werte werden verworfen, nicht durchgereicht
+        $this->t->assertEquals('', ReportClient::stripUnsupportedCategories('0,-3,abc,999'));
+    }
+
     public function testWasPermanentlyRejectedFalseWithoutRequest(): void
     {
         $config = new Config(['api_key' => '', 'report_rate_limit' => 60]);

@@ -127,7 +127,7 @@ final class UserAgentAnalyzerTest extends TestCase
         $this->t->assertNull($result);
     }
 
-    public function testCategoriesAre19And49(): void
+    public function testCategoryIsBadWebBotOnly(): void
     {
         $request = $this->createRequest([
             'uri'     => '/',
@@ -136,7 +136,9 @@ final class UserAgentAnalyzerTest extends TestCase
         $result = $this->analyzer->analyze($request);
         $this->t->assertNotNull($result);
         $categories = $result->getCategories();
-        $this->t->assertTrue(in_array(19, $categories, true), 'Should include category 19');
-        $this->t->assertTrue(in_array(49, $categories, true), 'Should include category 49');
+        $this->t->assertTrue(in_array(19, $categories, true), 'Should include category 19 (Bad Web Bot)');
+        // 49 is "WP Fake SEO Bot" upstream - a suspicious client string is no
+        // evidence of an SEO crawler, so it must not be reported here.
+        $this->t->assertFalse(in_array(49, $categories, true), 'Should not claim WP Fake SEO Bot');
     }
 }

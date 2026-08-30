@@ -277,7 +277,7 @@ Available in custom body templates **and** in the endpoint URL (for GET-style AP
 
 Each placeholder also exists as `{{name_url}}` (URL-encoded) and `{{name_json}}` (JSON-escaped). Multiple detections in one request are aggregated: categories are merged, severity is the maximum, comments are joined.
 
-`{{abuseipdb_categories}}` automatically translates reportedip.com category IDs to AbuseIPDB category IDs (IDs 1–23 are identical on both platforms; the CMS-specific IDs 24–58 map to their closest equivalent, e.g. *WP Login Brute Force* → *Brute-Force* + *Web App Attack*).
+`{{abuseipdb_categories}}` automatically translates reportedip.com category IDs to AbuseIPDB category IDs (IDs 1–23 are identical on both platforms; the CMS- and honeypot-specific IDs 24–63 map to their closest equivalent, e.g. *WP Login Brute Force* → *Brute-Force* + *Web App Attack*).
 
 ### Example: Reporting to AbuseIPDB
 

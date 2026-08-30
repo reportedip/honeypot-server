@@ -131,10 +131,30 @@ final class WebhookDispatcherTest extends TestCase
     {
         // 31 WP Login Brute Force -> 18 Brute-Force + 21 Web App Attack
         $this->t->assertEquals([18, 21], WebhookDispatcher::mapCategoriesToAbuseIpDb([31]));
-        // 44 XSS -> 21 Web App Attack
+        // 44 WP Code Injection -> 21 Web App Attack
         $this->t->assertEquals([21], WebhookDispatcher::mapCategoriesToAbuseIpDb([44]));
-        // 40 Form Spam -> 10 Web Spam
+        // 40 WP Contact Form Spam -> 10 Web Spam
         $this->t->assertEquals([10], WebhookDispatcher::mapCategoriesToAbuseIpDb([40]));
+        // 45 WP Database Injection -> 16 SQL Injection + 21 Web App Attack
+        $this->t->assertEquals([16, 21], WebhookDispatcher::mapCategoriesToAbuseIpDb([45]));
+        // 39 WP Comment Spam -> 12 Blog Spam (nicht Web App Attack)
+        $this->t->assertEquals([12], WebhookDispatcher::mapCategoriesToAbuseIpDb([39]));
+    }
+
+    public function testAbuseIpDbMappingCoversHoneypotCategories(): void
+    {
+        // Die High-Interaction-Kategorien 59-63 duerfen nicht auf den
+        // Sammel-Fallback 21 fallen - sie tragen die praezisere Information.
+        // 59 Honeytoken Triggered -> 15 Hacking + 18 Brute-Force
+        $this->t->assertEquals([15, 18], WebhookDispatcher::mapCategoriesToAbuseIpDb([59]));
+        // 60 Webshell Access -> 15 Hacking + 21 Web App Attack
+        $this->t->assertEquals([15, 21], WebhookDispatcher::mapCategoriesToAbuseIpDb([60]));
+        // 61 Indiscriminate Scan -> 14 Port Scan + 21 Web App Attack
+        $this->t->assertEquals([14, 21], WebhookDispatcher::mapCategoriesToAbuseIpDb([61]));
+        // 62 Source Code Disclosure -> 21 Web App Attack
+        $this->t->assertEquals([21], WebhookDispatcher::mapCategoriesToAbuseIpDb([62]));
+        // 63 Spider Trap -> 19 Bad Web Bot
+        $this->t->assertEquals([19], WebhookDispatcher::mapCategoriesToAbuseIpDb([63]));
     }
 
     public function testAbuseIpDbMappingDeduplicatesAndSorts(): void

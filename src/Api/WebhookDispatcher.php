@@ -31,46 +31,51 @@ final class WebhookDispatcher
      * Mapping reportedip.com category IDs -> AbuseIPDB category IDs.
      *
      * IDs 1-23 are identical on both platforms; the CMS-specific
-     * categories 24-58 are translated to their closest equivalent.
+     * categories 24-63 are translated to their closest equivalent.
      *
      * @var array<int, int[]>
      */
     private const ABUSEIPDB_MAP = [
-        24 => [15],     // Cryptomining -> Hacking
-        25 => [19],     // Data Harvesting -> Bad Web Bot
-        26 => [20],     // Malware Hosting -> Exploited Host
-        27 => [20],     // Command & Control -> Exploited Host
-        28 => [15],     // Backdoor Access -> Hacking
-        29 => [15],     // Ransomware -> Hacking
-        30 => [15],     // Malware Upload -> Hacking
+        24 => [15],     // Cryptocurrency Mining -> Hacking
+        25 => [20],     // Ransomware C&C -> Exploited Host
+        26 => [20],     // Banking Trojan -> Exploited Host
+        27 => [20],     // Mobile Malware -> Exploited Host
+        28 => [15],     // Supply Chain Attack -> Hacking
+        29 => [15, 21], // Zero-Day Exploit -> Hacking + Web App Attack
+        30 => [15],     // Nation State -> Hacking
         31 => [18, 21], // WP Login Brute Force -> Brute-Force + Web App Attack
-        32 => [21],     // WP Admin Probe -> Web App Attack
-        33 => [21],     // WP XML-RPC Abuse -> Web App Attack
+        32 => [18, 21], // WP Admin Brute Force -> Brute-Force + Web App Attack
+        33 => [18, 21], // WP XML-RPC Brute Force -> Brute-Force + Web App Attack
         34 => [21],     // WP REST API Abuse -> Web App Attack
-        35 => [21],     // WP Vulnerability Scan -> Web App Attack
+        35 => [21],     // WP Plugin Exploit -> Web App Attack
         36 => [21],     // WP Theme Exploit -> Web App Attack
-        37 => [21],     // WP Core File Modification -> Web App Attack
-        38 => [21],     // WP Config Exposure -> Web App Attack
-        39 => [21],     // WP Database Exposure -> Web App Attack
-        40 => [10],     // WP Form Spam -> Web Spam
+        37 => [21],     // WP Core Exploit -> Web App Attack
+        38 => [21],     // WP Zero-Day Exploit -> Web App Attack
+        39 => [12],     // WP Comment Spam -> Blog Spam
+        40 => [10],     // WP Contact Form Spam -> Web Spam
         41 => [10],     // WP Registration Spam -> Web Spam
         42 => [12],     // WP Trackback Spam -> Blog Spam
-        43 => [21],     // WP File Upload Attack -> Web App Attack
-        44 => [21],     // Cross-Site Scripting -> Web App Attack
-        45 => [21],     // Code Injection -> Web App Attack
-        46 => [21],     // WP Core Tampering -> Web App Attack
-        47 => [21],     // Directory Traversal -> Web App Attack
-        48 => [21],     // File Inclusion -> Web App Attack
-        49 => [19],     // Scraping -> Bad Web Bot
-        50 => [21],     // Open Redirect -> Web App Attack
-        51 => [4],      // Resource Exhaustion -> DDoS Attack
-        52 => [21],     // Media Library Abuse -> Web App Attack
-        53 => [10],     // Search Spam -> Web Spam
+        43 => [21],     // WP File Upload Malware -> Web App Attack
+        44 => [21],     // WP Code Injection -> Web App Attack
+        45 => [16, 21], // WP Database Injection -> SQL Injection + Web App Attack
+        46 => [15, 21], // WP Backdoor Installation -> Hacking + Web App Attack
+        47 => [10],     // WP SEO Spam -> Web Spam
+        48 => [19],     // WP Content Scraping -> Bad Web Bot
+        49 => [19],     // WP Fake SEO Bot -> Bad Web Bot
+        50 => [21],     // WP Redirect Hijacking -> Web App Attack
+        51 => [4],      // WP Resource Exhaustion -> DDoS Attack
+        52 => [21],     // WP Media Library Abuse -> Web App Attack
+        53 => [10],     // WP Search Abuse -> Web Spam
         54 => [21],     // WP Cron Abuse -> Web App Attack
-        55 => [21],     // User Enumeration -> Web App Attack
-        56 => [14],     // Version Fingerprinting -> Port Scan
-        57 => [21],     // WP Plugin Exploit -> Web App Attack
-        58 => [21],     // Config File Exposure -> Web App Attack
+        55 => [21],     // WP User Enumeration -> Web App Attack
+        56 => [14],     // WP Version Scanning -> Port Scan
+        57 => [14],     // WP Plugin Scanning -> Port Scan
+        58 => [21],     // WP Config Exposure -> Web App Attack
+        59 => [15, 18], // Honeytoken Triggered -> Hacking + Brute-Force
+        60 => [15, 21], // Webshell Access -> Hacking + Web App Attack
+        61 => [14, 21], // Indiscriminate Scan -> Port Scan + Web App Attack
+        62 => [21],     // Source Code Disclosure -> Web App Attack
+        63 => [19],     // Spider Trap -> Bad Web Bot
     ];
 
     public function __construct(

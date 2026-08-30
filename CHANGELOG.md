@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.7] - 2026-08-30
+
+### Fixed
+- **Reports were silently dropped when they carried a honeypot category**: the high-interaction categories 59-63 (honeytoken, webshell, indiscriminate scan, source disclosure, spider trap), introduced in 1.3.3, did not exist in the reportedip.com catalogue. The API validates every reported ID against its own table and rejects the WHOLE report with HTTP 400 (`rest_invalid_param: Invalid parameter(s): categories`) as soon as one ID is unknown — so a detection such as `14,15,19,21,49,61` was refused in full, and because `ReportQueue` treats 4xx as final, the entry was discarded instead of retried. The API now knows 59-63; `ReportClient` additionally retries such a rejection ONCE with only the categories every deployment accepts (`stripUnsupportedCategories()`), so a client running ahead of its API loses categories instead of the whole report
+- **Category registry no longer drifts from the API catalogue**: `CategoryRegistry` carried its own names and severities for IDs 22-58, which diverged from what reportedip.com actually files under those IDs (e.g. 25 was "Data Harvesting" locally but "Ransomware C&C" upstream, 28 "Backdoor Access" vs. "Supply Chain Attack", 47 "Directory Traversal" vs. "WP SEO Spam"). The admin panel therefore showed one threat while the platform recorded another. Names and severity levels now mirror `GET /wp-json/reportedip/v2/categories`, and the new `CategoryRegistryTest` pins the table to that catalogue
+- **Three analyzers reported the wrong threat upstream** as a consequence of that drift: `SpiderTrapAnalyzer` sent 25, filed as *Ransomware C&C* (severity 10) for what is a bait-path fetch — now 48 *WP Content Scraping*; `WebshellAccessAnalyzer` sent 28/30, filed as *Supply Chain Attack* / *Nation State* — now 46 *WP Backdoor Installation* + 43 *WP File Upload Malware*; `Honeytoken` sent 28 — now 46. `UserAgentAnalyzer` no longer claims 49 *WP Fake SEO Bot* for any suspicious client string and reports 19 *Bad Web Bot* alone
+
+### Changed
+- AbuseIPDB webhook mapping realigned to the corrected category meanings and extended to 59-63 (previously they fell through to the catch-all *Web App Attack*): 45 now maps to *SQL Injection* + *Web App Attack*, 39 to *Blog Spam*, 47 to *Web Spam*, 25/26/27 to *Exploited Host*, 59 to *Hacking* + *Brute-Force*, 61 to *Port Scan* + *Web App Attack*, 63 to *Bad Web Bot*
+
 ## [1.3.6] - 2026-08-06
 
 ### Changed

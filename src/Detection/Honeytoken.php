@@ -116,7 +116,7 @@ final class Honeytoken
             );
 
             // Confirmed malicious: hacking + brute-force + backdoor + honeytoken.
-            return new DetectionResult([15, 18, 28, 59], $comment, 100, 'Honeytoken');
+            return new DetectionResult([15, 18, 46, 59], $comment, 100, 'Honeytoken');
         }
 
         return null;

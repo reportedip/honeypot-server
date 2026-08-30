@@ -132,7 +132,7 @@ final class UserAgentAnalyzer implements AnalyzerInterface
             implode('; ', array_slice($findings, 0, 3))
         );
 
-        return new DetectionResult([19, 49], $comment, $maxScore, $this->getName());
+        return new DetectionResult([19], $comment, $maxScore, $this->getName());
     }
 
     private function hasGenericBotIndicator(string $ua): bool

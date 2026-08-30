@@ -35,7 +35,7 @@ final class SpiderTrapAnalyzer implements AnalyzerInterface
             substr($request->getPath(), 0, 200)
         );
 
-        // Bad web bot + data harvesting + spider-trap category.
-        return new DetectionResult([19, 25, 63], $comment, 55, $this->getName());
+        // Bad web bot + content scraping + spider-trap category.
+        return new DetectionResult([19, 48, 63], $comment, 55, $this->getName());
     }
 }

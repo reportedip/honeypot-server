@@ -72,7 +72,7 @@ final class WebshellAccessAnalyzer implements AnalyzerInterface
             substr($request->getPath(), 0, 200)
         );
 
-        // Backdoor access + malware upload + hacking + webshell category.
-        return new DetectionResult([28, 30, 15, 60], $comment, $score, $this->getName());
+        // Backdoor installation + malware upload + hacking + webshell category.
+        return new DetectionResult([46, 43, 15, 60], $comment, $score, $this->getName());
     }
 }
