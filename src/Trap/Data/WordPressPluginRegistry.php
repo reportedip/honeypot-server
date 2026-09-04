@@ -124,6 +124,96 @@ final class WordPressPluginRegistry
             'description' => 'Beginner friendly WordPress contact form plugin. Use our Drag & Drop form builder to create your WordPress forms.',
             'tags' => ['contact form', 'contact', 'form', 'survey', 'free'],
         ],
+
+        // The plugins below advertise versions that are vulnerable to
+        // widely exploited 2026 CVEs. Scanners that fingerprint the
+        // Stable tag will flag the site as exploitable and proceed with
+        // their exploit attempts, which the detection pipeline captures.
+
+        // CVE-2026-8206: password reset account takeover (500k installs)
+        'kirki' => [
+            'name' => 'Kirki Customizer Framework',
+            'version' => '4.2.0',
+            'requires' => '5.2',
+            'tested' => '6.4.2',
+            'requires_php' => '7.4',
+            'author' => 'Themeum',
+            'author_uri' => 'https://kirki.org/',
+            'description' => 'The most advanced WordPress Customizer Framework. Providing streamlined solutions for theme developers.',
+            'tags' => ['customizer', 'framework', 'theme options', 'options framework', 'fields'],
+        ],
+        // CVE-2026-8181: REST API authentication bypass (200k installs)
+        'burst-statistics' => [
+            'name' => 'Burst Statistics - Privacy-Friendly Analytics',
+            'version' => '2.0.5',
+            'requires' => '6.0',
+            'tested' => '6.4.2',
+            'requires_php' => '7.4',
+            'author' => 'Really Simple Plugins',
+            'author_uri' => 'https://burst-statistics.com/',
+            'description' => 'Self-hosted and privacy-friendly analytics dashboard for WordPress. GDPR compliant statistics without cookies.',
+            'tags' => ['analytics', 'statistics', 'privacy', 'GDPR', 'stats'],
+        ],
+        // CVE-2026-19632: plaintext password-reset key disclosure (400k installs)
+        'translatepress-multilingual' => [
+            'name' => 'Translate Multilingual sites - TranslatePress',
+            'version' => '3.3.1',
+            'requires' => '5.0',
+            'tested' => '6.4.2',
+            'requires_php' => '7.0',
+            'author' => 'Cozmoslabs, Razvan Mocanu, Madalin Ungureanu',
+            'author_uri' => 'https://translatepress.com/',
+            'description' => 'Translate your WordPress website directly from the front-end, with full support for WooCommerce and page builders.',
+            'tags' => ['translate', 'translation', 'multilingual', 'localization', 'i18n'],
+        ],
+        // CVE-2026-19598: unauthenticated privilege escalation (100k installs)
+        'pods' => [
+            'name' => 'Pods - Custom Content Types and Fields',
+            'version' => '3.3.9',
+            'requires' => '6.0',
+            'tested' => '6.4.2',
+            'requires_php' => '7.2',
+            'author' => 'Pods Framework Team',
+            'author_uri' => 'https://pods.io/',
+            'description' => 'Pods is a framework for creating, managing, and deploying customized content types and fields.',
+            'tags' => ['custom post types', 'custom fields', 'taxonomies', 'content types', 'framework'],
+        ],
+        // CVE-2026-82222: PHP object injection via unserialize (CVSS 10.0)
+        'give' => [
+            'name' => 'GiveWP - Donation Plugin and Fundraising Platform',
+            'version' => '4.16.7',
+            'requires' => '6.3',
+            'tested' => '6.4.2',
+            'requires_php' => '7.4',
+            'author' => 'GiveWP',
+            'author_uri' => 'https://givewp.com/',
+            'description' => 'The most robust, flexible, and intuitive way to accept donations on WordPress.',
+            'tags' => ['donations', 'donate', 'fundraising', 'crowdfunding', 'payments'],
+        ],
+        // CVE-2026-3300: unauthenticated remote code execution (CVSS 9.8)
+        'everest-forms' => [
+            'name' => 'Everest Forms - Contact Form, Quiz, Survey & Newsletter',
+            'version' => '1.9.12',
+            'requires' => '5.2',
+            'tested' => '6.4.2',
+            'requires_php' => '7.2',
+            'author' => 'WPEverest',
+            'author_uri' => 'https://wpeverest.com/',
+            'description' => 'Drag and drop contact form builder to create simple to complex forms with ease.',
+            'tags' => ['contact form', 'form builder', 'forms', 'survey', 'drag and drop'],
+        ],
+        // CVE-2026-3844: SSRF via gravatar fetch (400k+ installs)
+        'breeze' => [
+            'name' => 'Breeze - WordPress Cache Plugin',
+            'version' => '2.1.13',
+            'requires' => '5.3',
+            'tested' => '6.4.2',
+            'requires_php' => '7.0',
+            'author' => 'Cloudways',
+            'author_uri' => 'https://www.cloudways.com/',
+            'description' => 'Breeze is a WordPress cache plugin with extensive options to speed up your website.',
+            'tags' => ['cache', 'performance', 'speed', 'optimization', 'minify'],
+        ],
     ];
 
     /**

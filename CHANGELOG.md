@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.9] - 2026-09-05
+
+### Added
+- **Seven high-profile plugins added to the fake plugin registry**, each advertising a version that is vulnerable to a widely exploited 2026 CVE. Mass-scanning campaigns fingerprint installed plugins by fetching `/wp-content/plugins/<slug>/readme.txt` and reading the `Stable tag`; the honeypot now returns a convincing readme for exactly the slugs and versions those campaigns hunt for, so a scanner flags the site as exploitable and proceeds to its actual exploit request (which the detection pipeline logs and reports). New entries: `kirki` (CVE-2026-8206, account takeover), `burst-statistics` (CVE-2026-8181, REST auth bypass), `translatepress-multilingual` (CVE-2026-19632, reset-key disclosure), `pods` (CVE-2026-19598, privilege escalation), `give` (CVE-2026-82222, PHP object injection), `everest-forms` (CVE-2026-3300, unauthenticated RCE), `breeze` (CVE-2026-3844, SSRF). No routing or trap code changed — the readme/asset/directory handling in `FakeVulnTrap` already resolves any registered slug generically via `WordPressPluginRegistry::hasPlugin()`.
+
 ## [1.3.8] - 2026-08-31
 
 ### Removed
