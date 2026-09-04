@@ -214,6 +214,42 @@ final class WordPressPluginRegistry
             'description' => 'Breeze is a WordPress cache plugin with extensive options to speed up your website.',
             'tags' => ['cache', 'performance', 'speed', 'optimization', 'minify'],
         ],
+        // CVE-2024-28000: unauthenticated admin account takeover (6M+ installs)
+        'litespeed-cache' => [
+            'name' => 'LiteSpeed Cache',
+            'version' => '6.3',
+            'requires' => '5.3',
+            'tested' => '6.4.2',
+            'requires_php' => '7.0',
+            'author' => 'LiteSpeed Technologies',
+            'author_uri' => 'https://www.litespeedtech.com/',
+            'description' => 'High-performance page caching and site optimization from LiteSpeed.',
+            'tags' => ['cache', 'performance', 'optimization', 'pagespeed', 'core web vitals'],
+        ],
+        // CVE-2025-9501: unauthenticated remote code execution (1M+ installs)
+        'w3-total-cache' => [
+            'name' => 'W3 Total Cache',
+            'version' => '2.8.7',
+            'requires' => '5.3',
+            'tested' => '6.4.2',
+            'requires_php' => '8.0',
+            'author' => 'BoldGrid',
+            'author_uri' => 'https://www.boldgrid.com/w3-total-cache/',
+            'description' => 'Search Engine (SEO) and performance optimization through caching for WordPress.',
+            'tags' => ['cache', 'performance', 'pagespeed', 'cdn', 'optimization'],
+        ],
+        // CVE-2026-1357: unauthenticated arbitrary file upload to RCE (900k installs)
+        'wpvivid-backuprestore' => [
+            'name' => 'Migration, Backup, Staging - WPvivid Backup & Migration',
+            'version' => '0.9.123',
+            'requires' => '4.5',
+            'tested' => '6.4.2',
+            'requires_php' => '5.6',
+            'author' => 'WPvivid Team',
+            'author_uri' => 'https://wpvivid.com/',
+            'description' => 'Migrate, back up and restore your WordPress site, with scheduled backups to remote storage.',
+            'tags' => ['backup', 'migration', 'restore', 'staging', 'clone'],
+        ],
     ];
 
     /**

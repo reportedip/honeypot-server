@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.10] - 2026-09-05
+
+### Added
+- **New sensor: `RestBatchExploitAnalyzer` (wp2shell / CVE-2026-63030)** — detects exploitation of the WordPress REST batch endpoint (`/wp-json/batch/v1`, `?rest_route=/batch/v1`), the unauthenticated pre-auth RCE chain that was hitting the live honeypot as `POST /?rest_route=/batch/v1&_w2s=…` but was only ever logged as a generic hacker visit. The analyzer flags the `_w2s` campaign marker, rogue-admin/webshell naming (`w2s_`/`wp2_`), nested-batch route confusion, and the SQL-injection primitive (including `INTO OUTFILE` webshell drops). Reports categories 34 (REST API Abuse) + 37 (Core Exploit), escalating to 45 (DB Injection) and 46 (Backdoor Installation) when those signatures appear. Pipeline is now 40 analyzers.
+- **Three mass-install plugins added to the fake plugin registry**, each advertising a version vulnerable to a widely exploited CVE, so scanners fingerprinting the `readme.txt` Stable tag keep engaging: `litespeed-cache` (CVE-2024-28000, 6M+ installs), `w3-total-cache` (CVE-2025-9501 RCE, 1M+), `wpvivid-backuprestore` (CVE-2026-1357 unauthenticated upload-to-RCE, 900k). Registry is now 20 plugins.
+
 ## [1.3.9] - 2026-09-05
 
 ### Added

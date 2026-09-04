@@ -150,7 +150,7 @@ Each profile emulates a specific CMS with realistic URL patterns, HTTP headers, 
 
 ## Detection System
 
-The `DetectionPipeline` runs 39 analyzers on every request:
+The `DetectionPipeline` runs 40 analyzers on every request:
 
 | Analyzer | Detects |
 |---|---|
@@ -163,6 +163,7 @@ The `DetectionPipeline` runs 39 analyzers on every request:
 | `PluginExploitAnalyzer` | Known CMS plugin vulnerability paths |
 | `ConfigAccessAnalyzer` | Attempts to access `.env`, `wp-config.php`, etc. |
 | `VulnerabilityProbeAnalyzer` | Shellshock, Log4Shell, PHPUnit exploits |
+| `RestBatchExploitAnalyzer` | WordPress REST batch endpoint exploitation (wp2shell / CVE-2026-63030) |
 | `XmlRpcAnalyzer` | XML-RPC pingback abuse, method enumeration |
 | `UserAgentAnalyzer` | Malicious tools (sqlmap, nikto, dirbuster) |
 | `HeaderAnomalyAnalyzer` | Missing/suspicious HTTP headers |
@@ -400,7 +401,7 @@ php tests/run-tests.php --verbose        # Show timing per test
 1. All HTTP requests hit `public/index.php`
 2. `IpResolver` determines the real client IP (Cloudflare/proxy-aware)
 3. `Router` checks if the request targets the admin panel
-4. For honeypot requests: `Whitelist` check, then `DetectionPipeline` runs all 39 analyzers
+4. For honeypot requests: `Whitelist` check, then `DetectionPipeline` runs all 40 analyzers
 5. Detections are logged to SQLite with `sent=0` (queued for reporting)
 6. `Router` matches the path against the active CMS profile to select a trap
 7. The trap renders a convincing CMS-like response (login page, blog post, RSS feed, etc.)

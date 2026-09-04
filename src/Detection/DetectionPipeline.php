@@ -27,6 +27,7 @@ use ReportedIp\Honeypot\Detection\Analyzers\PluginExploitAnalyzer;
 use ReportedIp\Honeypot\Detection\Analyzers\RateLimitBypassAnalyzer;
 use ReportedIp\Honeypot\Detection\Analyzers\RegistrationHoneypotAnalyzer;
 use ReportedIp\Honeypot\Detection\Analyzers\ResourceExhaustionAnalyzer;
+use ReportedIp\Honeypot\Detection\Analyzers\RestBatchExploitAnalyzer;
 use ReportedIp\Honeypot\Detection\Analyzers\SearchSpamAnalyzer;
 use ReportedIp\Honeypot\Detection\Analyzers\SessionHijackingAnalyzer;
 use ReportedIp\Honeypot\Detection\Analyzers\SpiderTrapAnalyzer;
@@ -106,7 +107,7 @@ final class DetectionPipeline
     }
 
     /**
-     * Create a pipeline pre-loaded with all 39 default analyzers.
+     * Create a pipeline pre-loaded with all 40 default analyzers.
      */
     public static function createDefault(): self
     {
@@ -128,6 +129,7 @@ final class DetectionPipeline
         $pipeline->addAnalyzer(new XmlRpcAnalyzer());
         $pipeline->addAnalyzer(new CredentialStuffingAnalyzer());
         $pipeline->addAnalyzer(new VulnerabilityProbeAnalyzer());
+        $pipeline->addAnalyzer(new RestBatchExploitAnalyzer());
 
         // --- Wave 1: High priority (5) ---
         $pipeline->addAnalyzer(new ThemeExploitAnalyzer());
