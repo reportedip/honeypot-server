@@ -57,4 +57,11 @@ final class ForeignFrameworkProbeAnalyzerTest extends TestCase
         $result = $this->analyzer->analyze($this->createRequest(['uri' => '/']));
         $this->t->assertNull($result);
     }
+
+    public function testDetectsOpenVisitorsIotProbe(): void
+    {
+        $result = $this->analyzer->analyze($this->createRequest(['uri' => '/open/visitors/info/gets?uuid=1']));
+        $this->t->assertNotNull($result);
+        $this->t->assertTrue(in_array(61, $result->getCategories(), true));
+    }
 }

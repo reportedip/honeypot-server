@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.11] - 2026-09-06
+
+### Added
+- **Gravity SMTP credential-disclosure sensor** — `PluginExploitAnalyzer` now detects probes against `gravitysmtp/v1/tests/mock-data`, the unauthenticated Gravity SMTP endpoint that leaks stored SMTP/API provider credentials. A fleet rollout showed 259 such requests from 17 IPs going undetected because the probe also arrives as `?rest_route=/gravitysmtp/v1/...` where the request path is just `/` — the analyzer's leading `/` guard skipped it. The check now runs before that guard and matches both the `/wp-json/gravitysmtp/v1/` and `rest_route` forms, reporting categories 35 (Plugin Exploit) + 57 (Plugin Scanning) + 58 (Config Exposure); the `mock-data` credential endpoint scores higher (80) than a generic plugin probe (65).
+- **IoT/appliance visitor-API probe** added to `foreignFrameworkPaths()` — `/open/visitors/info/…` (seen 84 times fleet-wide, previously unlogged), flagged by `ForeignFrameworkProbeAnalyzer` as an indiscriminate scan (category 61).
+
+### Notes
+- Log-vs-detection audit across the 21-host fleet confirmed full sensor coverage over HTTPS. The remaining log-only requests are plain-HTTP (port 80) hits that the web server 301-redirects to HTTPS before they reach the honeypot; capturing those requires unchecking "Rewrite HTTP to HTTPS" in the site's web-server config and is outside this repository.
+
 ## [1.3.10] - 2026-09-05
 
 ### Added

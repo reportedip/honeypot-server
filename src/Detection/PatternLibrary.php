@@ -894,6 +894,7 @@ final class PatternLibrary
             '#/owa/auth#i'                              => 'Microsoft Exchange OWA',
             '#/autodiscover/autodiscover\.(xml|json)#i' => 'Exchange Autodiscover (ProxyLogon)',
             '#/\.git/config#i'                          => 'Git config disclosure',
+            '#/open/visitors/info/#i'                   => 'IoT/appliance visitor API probe',
         ];
     }
 }

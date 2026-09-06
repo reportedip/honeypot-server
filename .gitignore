@@ -31,6 +31,10 @@ CLAUDE.md
 .env
 .env.*
 
+# Local fleet data (SSH credentials + API keys + Rohmaterial — never commit)
+*.local.csv
+*.local.md
+
 # Logs & temp
 *.log
 *.cache
