@@ -35,6 +35,16 @@ ob_start();
                 <?php endforeach; ?>
             </select>
         </div>
+        <div style="min-width:110px;">
+            <label class="rip-label">Severity</label>
+            <select name="severity" class="rip-select">
+                <option value="">All</option>
+                <option value="critical" <?= ($filters['severity'] ?? '') === 'critical' ? 'selected' : '' ?>>Critical</option>
+                <option value="high" <?= ($filters['severity'] ?? '') === 'high' ? 'selected' : '' ?>>High</option>
+                <option value="medium" <?= ($filters['severity'] ?? '') === 'medium' ? 'selected' : '' ?>>Medium</option>
+                <option value="low" <?= ($filters['severity'] ?? '') === 'low' ? 'selected' : '' ?>>Low</option>
+            </select>
+        </div>
         <div style="min-width:80px;">
             <label class="rip-label">Method</label>
             <select name="method" class="rip-select">
@@ -94,15 +104,15 @@ ob_start();
                             <a href="<?= htmlspecialchars($admin_path, ENT_QUOTES, 'UTF-8') ?>/logs?ip=<?= urlencode($log['ip']) ?>" class="rip-link"><?= htmlspecialchars($log['ip'], ENT_QUOTES, 'UTF-8') ?></a>
                             <a href="https://reportedip.com/ip/<?= urlencode($log['ip']) ?>/" target="_blank" rel="noopener" class="rip-ip-external" title="View on reportedip.com">&#8599;</a>
                         </td>
-                        <td><?= $categoryRegistry::formatBadges($log['categories'] ?? '') ?></td>
-                        <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:var(--rip-font-size-sm);" title="<?= htmlspecialchars($log['comment'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                        <td><?= $categoryRegistry::formatBadges($log['categories'] ?? '', htmlspecialchars($admin_path, ENT_QUOTES, 'UTF-8') . '/logs?category=') ?></td>
+                        <td class="rip-cell--expandable" onclick="this.classList.toggle('rip-cell--expanded')" title="Click to expand: <?= htmlspecialchars($log['comment'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
                             <?= htmlspecialchars($log['comment'] ?? '', ENT_QUOTES, 'UTF-8') ?>
                         </td>
-                        <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:var(--rip-font-mono); font-size:var(--rip-font-size-sm);" title="<?= htmlspecialchars($log['request_uri'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                        <td class="rip-cell--expandable" onclick="this.classList.toggle('rip-cell--expanded')" style="font-family:var(--rip-font-mono);" title="Click to expand: <?= htmlspecialchars($log['request_uri'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
                             <?= htmlspecialchars($log['request_uri'] ?? '', ENT_QUOTES, 'UTF-8') ?>
                         </td>
                         <td><span class="rip-badge rip-badge--method"><?= htmlspecialchars($log['request_method'] ?? 'GET', ENT_QUOTES, 'UTF-8') ?></span></td>
-                        <td style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:var(--rip-font-size-xs); color:var(--rip-gray-500);" title="<?= htmlspecialchars($log['user_agent'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                        <td class="rip-cell--expandable" onclick="this.classList.toggle('rip-cell--expanded')" style="font-size:var(--rip-font-size-xs); color:var(--rip-gray-500);" title="Click to expand: <?= htmlspecialchars($log['user_agent'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
                             <?= htmlspecialchars($log['user_agent'] ?? '', ENT_QUOTES, 'UTF-8') ?>
                         </td>
                         <td style="white-space:nowrap; font-size:var(--rip-font-size-sm); color:var(--rip-gray-500);"><?= htmlspecialchars($log['timestamp'] ?? '', ENT_QUOTES, 'UTF-8') ?></td>

@@ -135,4 +135,30 @@ final class CategoryRegistryTest extends TestCase
         $this->t->assertEquals('Unknown (999)', CategoryRegistry::getName(999));
         $this->t->assertEquals(5, CategoryRegistry::getSeverity(999));
     }
+
+    public function testFormatBadgesWithoutUrlPrefix(): void
+    {
+        $html = CategoryRegistry::formatBadges('14,15');
+        $this->t->assertStringContains('<span class="rip-badge', $html);
+        $this->t->assertStringContains('Port Scan (14)', $html);
+        $this->t->assertStringContains('Hacking (15)', $html);
+    }
+
+    public function testFormatBadgesWithUrlPrefix(): void
+    {
+        $html = CategoryRegistry::formatBadges('14', '/_hp_admin/logs?category=');
+        $this->t->assertStringContains('<a href="/_hp_admin/logs?category=14"', $html);
+        $this->t->assertStringContains('Port Scan (14)</a>', $html);
+    }
+
+    public function testGetCategoriesBySeverityClass(): void
+    {
+        $critical = CategoryRegistry::getCategoriesBySeverityClass('critical');
+        $this->t->assertTrue(in_array(15, $critical, true));
+        $this->t->assertTrue(in_array(16, $critical, true));
+
+        $high = CategoryRegistry::getCategoriesBySeverityClass('high');
+        $this->t->assertTrue(in_array(14, $high, true));
+        $this->t->assertFalse(in_array(15, $high, true));
+    }
 }

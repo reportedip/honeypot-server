@@ -283,6 +283,42 @@
             gap: 3px;
             align-items: center;
         }
+        a.rip-badge {
+            text-decoration: none;
+            cursor: pointer;
+            transition: opacity var(--rip-transition), transform var(--rip-transition);
+        }
+        a.rip-badge:hover {
+            opacity: 0.85;
+            transform: translateY(-1px);
+        }
+
+        /* Expandable table cell */
+        .rip-cell--expandable {
+            cursor: pointer;
+            position: relative;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            user-select: text;
+        }
+        .rip-cell--expandable.rip-cell--expanded {
+            white-space: normal !important;
+            word-break: break-all;
+            max-width: 450px !important;
+        }
+        .rip-expand-toggle {
+            display: inline-block;
+            margin-left: 4px;
+            color: var(--rip-gray-400);
+            font-size: 10px;
+            cursor: pointer;
+            vertical-align: middle;
+        }
+        .rip-expand-toggle:hover {
+            color: var(--rip-primary);
+        }
 
         /* ============================================================
            Buttons

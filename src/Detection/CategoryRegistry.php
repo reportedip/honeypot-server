@@ -161,13 +161,18 @@ final class CategoryRegistry
         return 'low';
     }
 
-    /**
-     * Format a comma-separated category string as HTML badges with names and severity colors.
-     *
-     * @param string $categoryCsv Comma-separated category IDs (e.g. "16,45")
-     * @return string HTML badges
-     */
-    public static function formatBadges(string $categoryCsv): string
+    public static function getCategoriesBySeverityClass(string $class): array
+    {
+        $ids = [];
+        foreach (self::CATEGORIES as $id => $data) {
+            if (self::getSeverityClass($id) === $class) {
+                $ids[] = $id;
+            }
+        }
+        return $ids;
+    }
+
+    public static function formatBadges(string $categoryCsv, ?string $urlPrefix = null): string
     {
         $badges = '';
         foreach (explode(',', $categoryCsv) as $cat) {
@@ -178,13 +183,27 @@ final class CategoryRegistry
             $id = (int) $cat;
             $name = htmlspecialchars(self::getName($id), ENT_QUOTES, 'UTF-8');
             $class = self::getSeverityClass($id);
-            $badges .= sprintf(
-                '<span class="rip-badge rip-badge--severity-%s" title="%s">%s (%d)</span>',
-                $class,
-                htmlspecialchars(self::getDescription($id), ENT_QUOTES, 'UTF-8'),
-                $name,
-                $id
-            );
+            $desc = htmlspecialchars(self::getDescription($id), ENT_QUOTES, 'UTF-8');
+
+            if ($urlPrefix !== null) {
+                $badges .= sprintf(
+                    '<a href="%s%d" class="rip-badge rip-badge--severity-%s" title="%s">%s (%d)</a>',
+                    htmlspecialchars($urlPrefix, ENT_QUOTES, 'UTF-8'),
+                    $id,
+                    $class,
+                    $desc,
+                    $name,
+                    $id
+                );
+            } else {
+                $badges .= sprintf(
+                    '<span class="rip-badge rip-badge--severity-%s" title="%s">%s (%d)</span>',
+                    $class,
+                    $desc,
+                    $name,
+                    $id
+                );
+            }
         }
         if ($badges === '') {
             return '';
@@ -192,9 +211,6 @@ final class CategoryRegistry
         return '<span class="rip-badge-group">' . $badges . '</span>';
     }
 
-    /**
-     * Check if a category ID exists.
-     */
     public static function exists(int $id): bool
     {
         return isset(self::CATEGORIES[$id]);

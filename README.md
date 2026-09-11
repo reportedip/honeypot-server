@@ -93,11 +93,11 @@ For high-traffic installations, switch to **cron mode** in `config/config.php`:
 Then set up a cron job:
 
 ```bash
-# Process the report queue every 5 minutes
-*/5 * * * * php /path/to/honeypot-server/cli.php process-queue
+# Process the report queue silently every 5 minutes
+*/5 * * * * php /path/to/honeypot-server/cli.php process-queue > /dev/null 2>&1
 ```
 
-Cleanup of old entries runs automatically in both modes.
+To capture CLI output for debugging, redirect to `>> data/cron.log 2>&1` instead. Log files (`cron.log`, `api_errors.log`) are automatically rotated when exceeding 2 MB. Cleanup of old database entries runs automatically in both modes.
 
 ## Configuration
 

@@ -257,6 +257,7 @@ final class AdminController
         $filters = [
             'ip'       => $request->getQueryParam('ip') ?? '',
             'category' => $request->getQueryParam('category') ?? '',
+            'severity' => $request->getQueryParam('severity') ?? '',
             'method'   => $request->getQueryParam('method') ?? '',
             'sent'     => $request->getQueryParam('sent') ?? '',
             'search'   => $request->getQueryParam('search') ?? '',

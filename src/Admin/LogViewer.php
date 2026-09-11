@@ -47,8 +47,22 @@ final class LogViewer
         }
 
         if (!empty($filters['category'])) {
-            $where[] = 'categories LIKE ?';
-            $params[] = '%' . $filters['category'] . '%';
+            $where[] = '("," || categories || ",") LIKE ?';
+            $params[] = '%,' . $filters['category'] . ',%';
+        }
+
+        if (!empty($filters['severity'])) {
+            $catIds = CategoryRegistry::getCategoriesBySeverityClass((string) $filters['severity']);
+            if (!empty($catIds)) {
+                $sevClauses = [];
+                foreach ($catIds as $cid) {
+                    $sevClauses[] = '("," || categories || ",") LIKE ?';
+                    $params[] = '%,' . $cid . ',%';
+                }
+                $where[] = '(' . implode(' OR ', $sevClauses) . ')';
+            } else {
+                $where[] = '1 = 0';
+            }
         }
 
         if (!empty($filters['method'])) {

@@ -193,18 +193,18 @@ ob_start();
             <div class="rip-meter">
                 <?php foreach ($sev['buckets'] as $sevKey => $sevCount): ?>
                     <?php if ($sevCount > 0): ?>
-                        <div class="rip-meter__seg rip-meter__seg--<?= $sevKey ?>" style="width:<?= ($sevCount / $sevTotal) * 100 ?>%;" title="<?= htmlspecialchars($sevMeta[$sevKey], ENT_QUOTES, 'UTF-8') ?>: <?= number_format($sevCount) ?>"></div>
+                        <a href="<?= $base ?>/logs?severity=<?= urlencode($sevKey) ?>" class="rip-meter__seg rip-meter__seg--<?= $sevKey ?>" style="width:<?= ($sevCount / $sevTotal) * 100 ?>%; display:block;" title="<?= htmlspecialchars($sevMeta[$sevKey], ENT_QUOTES, 'UTF-8') ?>: <?= number_format($sevCount) ?>"></a>
                     <?php endif; ?>
                 <?php endforeach; ?>
             </div>
             <div class="rip-legend">
                 <?php foreach ($sev['buckets'] as $sevKey => $sevCount): ?>
-                    <div class="rip-legend__row">
+                    <a href="<?= $base ?>/logs?severity=<?= urlencode($sevKey) ?>" class="rip-legend__row" style="text-decoration:none; color:inherit;">
                         <span class="rip-legend__dot rip-legend__dot--<?= $sevKey ?>"></span>
                         <span class="rip-legend__label"><?= htmlspecialchars($sevMeta[$sevKey], ENT_QUOTES, 'UTF-8') ?></span>
                         <span class="rip-legend__value"><?= number_format($sevCount) ?></span>
                         <span class="rip-legend__pct"><?= $sevTotal > 0 ? round(($sevCount / $sevTotal) * 100) : 0 ?>%</span>
-                    </div>
+                    </a>
                 <?php endforeach; ?>
             </div>
         <?php else: ?>
@@ -373,7 +373,7 @@ ob_start();
             <?php if (!empty($stats['top_categories'])): ?>
                 <?php foreach (array_slice($stats['top_categories'], 0, 8) as $row): ?>
                     <tr>
-                        <td><?= $categoryRegistry::formatBadges($row['categories']) ?></td>
+                        <td><?= $categoryRegistry::formatBadges($row['categories'], $base . '/logs?category=') ?></td>
                         <td style="text-align:right; font-weight:600;"><?= number_format((int)$row['cnt']) ?></td>
                     </tr>
                 <?php endforeach; ?>
@@ -475,7 +475,7 @@ ob_start();
                             <a href="<?= $base ?>/logs?ip=<?= urlencode($log['ip']) ?>" class="rip-link"><?= htmlspecialchars($log['ip'], ENT_QUOTES, 'UTF-8') ?></a>
                             <a href="https://reportedip.com/ip/<?= urlencode($log['ip']) ?>/" target="_blank" rel="noopener" class="rip-ip-external" title="View on reportedip.com">&#8599;</a>
                         </td>
-                        <td><?= $categoryRegistry::formatBadges($log['categories'] ?? '') ?></td>
+                        <td><?= $categoryRegistry::formatBadges($log['categories'] ?? '', $base . '/logs?category=') ?></td>
                         <td style="max-width:250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="<?= htmlspecialchars($log['request_uri'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
                             <?= htmlspecialchars($log['request_uri'] ?? '', ENT_QUOTES, 'UTF-8') ?>
                         </td>
@@ -661,8 +661,8 @@ ob_start();
             <div>
                 <strong style="color:var(--rip-gray-600);">Linux / crontab</strong>
                 <div style="font-size:var(--rip-font-size-xs); color:var(--rip-gray-500); margin:4px 0;">Recommended: every 5 minutes</div>
-                <pre style="background:var(--rip-gray-900); color:var(--rip-gray-300); padding:10px 14px; border-radius:var(--rip-radius-md); font-size:var(--rip-font-size-sm); overflow-x:auto; margin:0;">*/5 * * * * cd <?= htmlspecialchars(dirname(__DIR__, 2), ENT_QUOTES, 'UTF-8') ?> && php cli.php process-queue >> data/cron.log 2>&1</pre>
-                <div style="font-size:var(--rip-font-size-xs); color:var(--rip-success); margin-top:4px;">Cleanup of old entries runs automatically (retention: <?= (int)($system['retention_days'] ?? 90) ?> days).</div>
+                <pre style="background:var(--rip-gray-900); color:var(--rip-gray-300); padding:10px 14px; border-radius:var(--rip-radius-md); font-size:var(--rip-font-size-sm); overflow-x:auto; margin:0;">*/5 * * * * cd <?= htmlspecialchars(dirname(__DIR__, 2), ENT_QUOTES, 'UTF-8') ?> && php cli.php process-queue > /dev/null 2>&1</pre>
+                <div style="font-size:var(--rip-font-size-xs); color:var(--rip-gray-500); margin-top:4px;">Append <code>&gt;&gt; data/cron.log 2&gt;&amp;1</code> to capture output (auto-rotated when &gt; 2 MB). Database cleanup runs automatically (retention: <?= (int)($system['retention_days'] ?? 90) ?> days).</div>
             </div>
 
             <div>

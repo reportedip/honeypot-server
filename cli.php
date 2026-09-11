@@ -211,6 +211,15 @@ function commandProcessQueue(Database $db, Config $config): void
         echo sprintf("Cleanup: %d visitor entries older than %d days removed.\n", $visitorsCleaned, $retentionDays);
     }
 
+    // Auto-rotate log files if exceeding 2 MB
+    $dataDir = dirname((string) $config->get('db_path', __DIR__ . '/data/honeypot.sqlite'));
+    if (rotateLogFile($dataDir . '/cron.log')) {
+        echo "Log rotation: data/cron.log exceeded 2 MB and was trimmed.\n";
+    }
+    if (rotateLogFile($dataDir . '/api_errors.log')) {
+        echo "Log rotation: data/api_errors.log exceeded 2 MB and was trimmed.\n";
+    }
+
     // Save cron run status for the admin dashboard
     saveCronStatus($config, $result, $remaining, $cleaned);
 }
@@ -220,6 +229,14 @@ function commandCleanup(Database $db, Config $config, int $days): void
     $logger = new Logger($db, $config);
     $deleted = $logger->cleanup($days);
     echo sprintf("Cleaned up: %d entries older than %d days removed.\n", $deleted, $days);
+
+    $dataDir = dirname((string) $config->get('db_path', __DIR__ . '/data/honeypot.sqlite'));
+    if (rotateLogFile($dataDir . '/cron.log')) {
+        echo "Log rotation: data/cron.log trimmed.\n";
+    }
+    if (rotateLogFile($dataDir . '/api_errors.log')) {
+        echo "Log rotation: data/api_errors.log trimmed.\n";
+    }
 }
 
 function commandWhitelistAdd(Database $db, string $ip, string $description): void
@@ -341,6 +358,23 @@ function getOption(array $argv, string $option, string $default): string
         }
     }
     return $default;
+}
+
+function rotateLogFile(string $filePath, int $maxBytes = 2097152, int $keepLines = 500): bool
+{
+    if (!file_exists($filePath) || filesize($filePath) <= $maxBytes) {
+        return false;
+    }
+
+    $lines = @file($filePath, FILE_IGNORE_NEW_LINES);
+    if ($lines === false || empty($lines)) {
+        return false;
+    }
+
+    $retained = array_slice($lines, -$keepLines);
+    $content = implode("\n", $retained) . "\n";
+
+    return @file_put_contents($filePath, $content, LOCK_EX) !== false;
 }
 
 /**
