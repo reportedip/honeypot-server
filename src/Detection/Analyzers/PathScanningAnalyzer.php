@@ -72,7 +72,6 @@ final class PathScanningAnalyzer implements AnalyzerInterface
             '/\/(xmlrpc\.php|wp-cron\.php)$/i' => ['WordPress system file probe', 50],
             '/\/server-(status|info)$/i' => ['Server status page probe', 55],
             '/\/(\.well-known|crossdomain\.xml|clientaccesspolicy\.xml)/i' => ['Policy file probe', 40],
-            '/\/(robots\.txt|sitemap\.xml)$/i' => ['Reconnaissance (robots/sitemap)', 40],
             '/\/(actuator|health|metrics|prometheus)\/?/i' => ['Application monitoring endpoint probe', 55],
             '/\/(api|v1|v2|v3)\/(admin|debug|test)\//i' => ['API admin/debug endpoint probe', 55],
         ];

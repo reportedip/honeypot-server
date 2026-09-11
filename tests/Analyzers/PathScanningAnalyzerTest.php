@@ -103,6 +103,13 @@ final class PathScanningAnalyzerTest extends TestCase
         $this->t->assertNull($result);
     }
 
+    public function testIgnoresRobotsTxtAndSitemaps(): void
+    {
+        $this->t->assertNull($this->analyzer->analyze($this->createRequest(['uri' => '/robots.txt'])));
+        $this->t->assertNull($this->analyzer->analyze($this->createRequest(['uri' => '/sitemap.xml'])));
+        $this->t->assertNull($this->analyzer->analyze($this->createRequest(['uri' => '/wp-sitemap.xml'])));
+    }
+
     public function testCategoriesAre14And15(): void
     {
         $request = $this->createRequest(['uri' => '/.env']);

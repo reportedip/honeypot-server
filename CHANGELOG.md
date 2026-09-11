@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.12] - 2026-09-11
+
+### Fixed
+- **False positive on `/robots.txt` and `/sitemap.xml`** — `PathScanningAnalyzer` no longer treats standard requests to `/robots.txt` or `/sitemap.xml` as a reconnaissance attack (previously reporting categories 14: Port Scan + 15: Hacking). This prevents false abuse reports when unlisted crawlers, browsers, or search bots fetch robots/sitemap files. Harvesting detection is still cleanly handled by `SpiderTrapAnalyzer` when a bot requests the hidden bait path advertised inside those files.
+
+### Added
+- **Expanded AI and search bot classification in `BotDetector`** — added recognition for modern AI search and retrieval agents including `OAI-SearchBot` (OpenAI SearchBot), `Claude-User`, `Claude-SearchBot`, `Perplexity-User`, `Amazonbot`, `Amzn-SearchBot`, `Amzn-User`, `Google-CloudVertexBot`, `Meta-ExternalFetcher`, `MistralBot`, `DeepSeek`, `YouBot`, `DuckAssistBot`, and `Timpibot`.
+- **Expanded search engine and preview crawlers** — added `GoogleOther`, `Google-InspectionTool`, `Storebot-Google`, `Google-Read-Aloud`, `Google-Site-Verification`, `BingPreview`, `msnbot`, `archive.org_bot`, `ia_archiver`, `Qwantify`, `Sogou`, `MojeekBot`, `SeznamBot`, `Pinterestbot`, `Slackbot`, `Discordbot`, `TelegramBot`, and `WhatsApp`.
+- **Additional HTTP client library patterns** — added `aiohttp`, `httpx`, `reqwest`, `Postman`, and `Guzzle` to automated bot classification.
+- **Unit & E2E test suites** — added `BotDetectorTest` unit test suite and `tests/e2e-docker-test.php` for automated end-to-end testing against Docker honeypot instances.
+
 ## [1.3.11] - 2026-09-06
 
 ### Added
