@@ -47,7 +47,7 @@ ob_start();
 
 <?php if ((int) ($stats['total'] ?? 0) === 0): ?>
 <div class="rip-alert rip-alert--info">
-    <strong>Honeypot armed &mdash; no attacks recorded yet.</strong> The emulated <?= htmlspecialchars(ucfirst($system['cms_profile'] ?? 'CMS'), ENT_QUOTES, 'UTF-8') ?> installation is live. As soon as scanners and bots probe it, their activity will appear here.
+    <strong>Honeypot armed &mdash; no attacks recorded yet.</strong> The emulated <?= htmlspecialchars(\ReportedIp\Honeypot\Profile\CmsProfile::displayName((string) ($system['cms_profile'] ?? 'CMS')), ENT_QUOTES, 'UTF-8') ?> installation is live. As soon as scanners and bots probe it, their activity will appear here.
 </div>
 <?php endif; ?>
 
@@ -732,7 +732,7 @@ Register-ScheduledTask -TaskName "HoneypotQueue" -Action $action -Trigger $trigg
         </div>
         <div>
             <div class="rip-kv__key">CMS Profile</div>
-            <div class="rip-kv__val"><?= htmlspecialchars(ucfirst($system['cms_profile'] ?? ''), ENT_QUOTES, 'UTF-8') ?></div>
+            <div class="rip-kv__val"><?= htmlspecialchars(\ReportedIp\Honeypot\Profile\CmsProfile::displayName((string) ($system['cms_profile'] ?? '')), ENT_QUOTES, 'UTF-8') ?></div>
         </div>
         <div>
             <div class="rip-kv__key">API Configured</div>

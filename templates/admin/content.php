@@ -22,7 +22,7 @@ ob_start();
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
     <div>
-        <strong><?= number_format($total) ?></strong> content entries (<?= htmlspecialchars(ucfirst($cms_profile), ENT_QUOTES, 'UTF-8') ?>)
+        <strong><?= number_format($total) ?></strong> content entries (<?= htmlspecialchars(\ReportedIp\Honeypot\Profile\CmsProfile::displayName($cms_profile), ENT_QUOTES, 'UTF-8') ?>)
     </div>
     <a href="<?= htmlspecialchars($admin_path, ENT_QUOTES, 'UTF-8') ?>/content/generate" class="rip-button rip-button--primary">Generate Content</a>
 </div>

@@ -49,6 +49,22 @@ abstract class CmsProfile
     abstract public function getName(): string;
 
     /**
+     * Turn a CMS profile identifier into its official, correctly cased name.
+     *
+     * `ucfirst()` on the identifier produces "Wordpress", which is a misspelling
+     * of the WordPress trademark, so every user-facing label routes through here.
+     */
+    public static function displayName(string $name): string
+    {
+        return match (strtolower(trim($name))) {
+            'wordpress' => 'WordPress',
+            'drupal'    => 'Drupal',
+            'joomla'    => 'Joomla',
+            default     => ucfirst($name),
+        };
+    }
+
+    /**
      * Get the primary login page path.
      */
     abstract public function getLoginPath(): string;

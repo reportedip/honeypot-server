@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ReportedIp\Honeypot\Content;
 
 use ReportedIp\Honeypot\Core\Config;
+use ReportedIp\Honeypot\Profile\CmsProfile;
 
 /**
  * Generates content via OpenAI API (or compatible endpoint).
@@ -45,7 +46,7 @@ final class ContentGenerator
 
         $niche = $this->config->get('content_niche', '');
         $topicStr = $topic !== '' ? $topic : ($niche !== '' ? $niche : 'general business topics');
-        $cmsLabel = ucfirst($cmsProfile);
+        $cmsLabel = CmsProfile::displayName($cmsProfile);
 
         $langLabel = $language === 'de' ? 'Deutsch' : 'English';
         $langInstruction = $language === 'de'

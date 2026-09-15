@@ -46,7 +46,7 @@ ob_start();
         </div>
 
         <div class="rip-help-text" style="margin-bottom:16px;">
-            CMS Profile: <strong><?= htmlspecialchars(ucfirst($cms_profile), ENT_QUOTES, 'UTF-8') ?></strong> &mdash;
+            CMS Profile: <strong><?= htmlspecialchars(\ReportedIp\Honeypot\Profile\CmsProfile::displayName($cms_profile), ENT_QUOTES, 'UTF-8') ?></strong> &mdash;
             Posts are generated one at a time via OpenAI API to avoid timeouts.
         </div>
 
