@@ -61,6 +61,15 @@ final class ReportQueue
                 continue;
             }
 
+            // The IP may have landed on the whitelist after this entry was
+            // queued — either mirrored from the API's own verdict or added by
+            // the operator. Sending it would just earn another rejection.
+            if ($this->whitelist->isWhitelisted((string) $entry['ip'])) {
+                $this->markRejected((int) $entry['id']);
+                $result['skipped']++;
+                continue;
+            }
+
             // Stop the batch while an API backoff is active — otherwise every
             // remaining entry would run through report(), fail, and inflate its
             // failed_attempts counter without anything actually being sent.
