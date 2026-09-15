@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.4.1] - 2026-09-15
+
+### Fixed
+- **Queued reports for an already whitelisted IP are no longer sent** (follow-up to #6) — mirroring the API's whitelist verdict stopped new detections, but everything already queued for that IP still went out one request at a time and was rejected one at a time. Observed on the first fleet instance running 1.4.0: four queued entries for the same whitelisted IP produced four rejected reports right after the update. `ReportQueue::process()` now drops a queued entry whose IP is on the local whitelist without contacting the API, which also covers entries queued before the operator whitelisted an IP by hand.
+
 ## [1.4.0] - 2026-09-15
 
 ### Added
