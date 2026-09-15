@@ -48,6 +48,9 @@ final class ReportClient
     /** @var int|null HTTP status code of the most recent API response */
     private ?int $lastHttpCode = null;
 
+    /** @var string Body of the most recent API response */
+    private string $lastResponseBody = '';
+
     public function __construct(Config $config)
     {
         $this->config = $config;
@@ -79,6 +82,69 @@ final class ReportClient
     {
         return $this->lastHttpCode !== null
             && self::isPermanentRejectionCode($this->lastHttpCode);
+    }
+
+    /**
+     * Check whether the API rejected the last report because the IP is on its
+     * own whitelist (verified search-engine crawlers and the like).
+     *
+     * Such an IP will be rejected on every future attempt too, so the caller
+     * can stop sending reports for it instead of queueing them up again.
+     */
+    public function wasWhitelistedUpstream(): bool
+    {
+        return $this->lastHttpCode !== null
+            && self::isWhitelistRejection($this->lastHttpCode, $this->lastResponseBody);
+    }
+
+    /**
+     * Describe the upstream whitelisting of the last rejected report.
+     *
+     * Falls back to the API's plain message when the structured
+     * `whitelist_info` payload is missing, and to a fixed string when the
+     * response cannot be parsed at all.
+     */
+    public function getWhitelistReason(): string
+    {
+        $data = json_decode($this->lastResponseBody, true);
+
+        if (is_array($data)) {
+            $info = $data['data']['whitelist_info'] ?? null;
+
+            if (is_array($info)) {
+                $category = trim((string) ($info['category'] ?? ''));
+                $reason = trim((string) ($info['reason'] ?? ''));
+
+                $label = implode(': ', array_filter([$category, $reason], static fn (string $v): bool => $v !== ''));
+
+                if ($label !== '') {
+                    return mb_substr($label, 0, 200);
+                }
+            }
+
+            $message = trim((string) ($data['message'] ?? ''));
+            if ($message !== '') {
+                return mb_substr($message, 0, 200);
+            }
+        }
+
+        return 'whitelisted upstream';
+    }
+
+    /**
+     * Detect the API's "IP is whitelisted" rejection.
+     *
+     * The API answers with HTTP 400 and `code: ip_whitelisted` when the
+     * reported IP belongs to a verified crawler or another whitelisted
+     * operator — see ReportedIP_Whitelist_Manager::check_whitelist_before_report().
+     */
+    public static function isWhitelistRejection(int $httpCode, string $responseBody): bool
+    {
+        if ($httpCode !== 400) {
+            return false;
+        }
+
+        return stripos($responseBody, 'ip_whitelisted') !== false;
     }
 
     /**
@@ -182,6 +248,7 @@ final class ReportClient
     {
         $this->lastError = null;
         $this->lastHttpCode = null;
+        $this->lastResponseBody = '';
 
         if ($this->isRateLimited()) {
             $this->lastError = 'Local rate limit exceeded';
@@ -263,6 +330,7 @@ final class ReportClient
         curl_close($ch);
 
         $this->lastHttpCode = $httpCode;
+        $this->lastResponseBody = (string) $response;
         $this->trackRequest();
 
         // Handle cURL errors (timeout, connection refused, …) — the API is

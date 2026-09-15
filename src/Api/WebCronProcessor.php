@@ -8,6 +8,7 @@ use ReportedIp\Honeypot\Core\Config;
 use ReportedIp\Honeypot\Persistence\Database;
 use ReportedIp\Honeypot\Persistence\Logger;
 use ReportedIp\Honeypot\Persistence\VisitorLogger;
+use ReportedIp\Honeypot\Persistence\Whitelist;
 
 /**
  * Web-based cron processor for automatic queue processing.
@@ -99,6 +100,10 @@ final class WebCronProcessor
         $visitorLogger = new VisitorLogger($this->db);
         $visitorLogger->cleanup($retentionDays);
 
+        // Whitelist entries mirrored from the API expire on their own; drop the
+        // dead ones so the admin list does not fill up with stale mirrors.
+        (new Whitelist($this->db))->purgeExpired();
+
         // Update last_cleanup_ts in status file
         $existing = [];
         if (file_exists($statusFile)) {
@@ -111,7 +116,7 @@ final class WebCronProcessor
     /**
      * Save cron run status to a JSON file for the admin dashboard.
      *
-     * @param array{sent: int, failed: int, skipped: int, errors: string[]} $result
+     * @param array{sent: int, failed: int, skipped: int, whitelisted?: int, errors: string[]} $result
      */
     private function saveCronStatus(array $result, int $remaining): void
     {
@@ -128,10 +133,11 @@ final class WebCronProcessor
         $existing['last_run'] = date('Y-m-d H:i:s');
         $existing['queue_mode'] = 'web';
         $existing['last_result'] = [
-            'sent'       => $result['sent'],
-            'failed'     => $result['failed'],
-            'skipped'    => $result['skipped'],
-            'remaining'  => $remaining,
+            'sent'        => $result['sent'],
+            'failed'      => $result['failed'],
+            'skipped'     => $result['skipped'],
+            'whitelisted' => $result['whitelisted'] ?? 0,
+            'remaining'   => $remaining,
             'cleaned'    => 0,
             'had_errors' => !empty($result['errors']),
         ];
