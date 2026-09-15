@@ -443,6 +443,11 @@
         .rip-stat-card__hint { font-size: var(--rip-font-size-xs); color: var(--rip-gray-400); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         a.rip-stat-card { text-decoration: none; color: inherit; transition: box-shadow var(--rip-transition); }
         a.rip-stat-card:hover { box-shadow: var(--rip-shadow-lg); }
+        .rip-stat-card--active {
+            box-shadow: var(--rip-shadow-lg);
+            outline: 2px solid var(--rip-primary);
+            outline-offset: -2px;
+        }
 
         /* ============================================================
            Segmented Control

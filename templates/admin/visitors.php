@@ -25,19 +25,33 @@ $typeStatColors = [
     'human'    => 'var(--rip-primary)',
 ];
 
+$typeLabel = \ReportedIp\Honeypot\Persistence\VisitorLogger::typeLabel(...);
+$typeFilterUrl = static fn (string $type): string
+    => \ReportedIp\Honeypot\Persistence\VisitorLogger::typeFilterUrl($admin_path, $type, $filters);
+
 ob_start();
 ?>
 
-<!-- Summary Cards -->
-<div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:12px; margin-bottom:24px;">
+<!-- Summary Cards -- each one filters the log below by visitor type -->
+<div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:12px; margin-bottom:12px;">
     <?php foreach ($stats as $type => $count): ?>
-        <?php $statColor = $typeStatColors[$type] ?? 'var(--rip-gray-600)'; ?>
-        <div class="rip-stat-card" style="flex-direction:column; text-align:center; gap:4px;">
-            <div class="rip-stat-card__label"><?= htmlspecialchars(str_replace('_', ' ', $type), ENT_QUOTES, 'UTF-8') ?></div>
+        <?php
+        $statColor = $typeStatColors[$type] ?? 'var(--rip-gray-600)';
+        $isActive = ($filters['type'] ?? '') === $type;
+        $label = $typeLabel($type);
+        ?>
+        <a href="<?= htmlspecialchars($typeFilterUrl($type), ENT_QUOTES, 'UTF-8') ?>"
+           class="rip-stat-card<?= $isActive ? ' rip-stat-card--active' : '' ?>"
+           style="flex-direction:column; text-align:center; gap:4px;"
+           title="<?= $isActive ? 'Clear the ' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . ' filter' : 'Show only ' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . ' entries' ?>">
+            <div class="rip-stat-card__label"><?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?></div>
             <div class="rip-stat-card__value" style="font-size:var(--rip-font-size-2xl); color:<?= $statColor ?>;"><?= number_format($count) ?></div>
-        </div>
+        </a>
     <?php endforeach; ?>
 </div>
+<p style="margin:0 0 24px; font-size:var(--rip-font-size-xs); color:var(--rip-gray-500);">
+    Counts cover the last 24 hours. Click a card to filter the full log below by that type.
+</p>
 
 <!-- Filters -->
 <div class="rip-card" style="margin-bottom:16px;">
@@ -46,8 +60,8 @@ ob_start();
             <label class="rip-label">Type</label>
             <select name="type" class="rip-select">
                 <option value="">All</option>
-                <?php foreach (['good_bot', 'ai_agent', 'bad_bot', 'hacker', 'human'] as $t): ?>
-                    <option value="<?= $t ?>" <?= ($filters['type'] ?? '') === $t ? 'selected' : '' ?>><?= htmlspecialchars(str_replace('_', ' ', ucfirst($t)), ENT_QUOTES, 'UTF-8') ?></option>
+                <?php foreach (array_keys(\ReportedIp\Honeypot\Persistence\VisitorLogger::TYPE_LABELS) as $t): ?>
+                    <option value="<?= $t ?>" <?= ($filters['type'] ?? '') === $t ? 'selected' : '' ?>><?= htmlspecialchars($typeLabel($t), ENT_QUOTES, 'UTF-8') ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
@@ -98,7 +112,7 @@ ob_start();
                         <td><?= htmlspecialchars($entry['bot_name'] ?? '', ENT_QUOTES, 'UTF-8') ?></td>
                         <td>
                             <span class="rip-badge <?= $badgeClass ?>">
-                                <?= htmlspecialchars(str_replace('_', ' ', $entry['visitor_type']), ENT_QUOTES, 'UTF-8') ?>
+                                <?= htmlspecialchars($typeLabel((string) $entry['visitor_type']), ENT_QUOTES, 'UTF-8') ?>
                             </span>
                         </td>
                         <td style="max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:var(--rip-font-size-sm);" title="<?= htmlspecialchars($entry['request_uri'] ?? '', ENT_QUOTES, 'UTF-8') ?>">

@@ -11,11 +11,56 @@ use ReportedIp\Honeypot\Core\Request;
  */
 final class VisitorLogger
 {
+    /**
+     * Visitor type identifier => label shown in the admin panel.
+     *
+     * Single source of truth for both the set of known types and their
+     * spelling — deriving labels from the identifier produced "Ai agent".
+     */
+    public const TYPE_LABELS = [
+        'good_bot' => 'Good Bot',
+        'ai_agent' => 'AI Agent',
+        'bad_bot'  => 'Bad Bot',
+        'hacker'   => 'Hacker',
+        'human'    => 'Human',
+    ];
+
     private Database $db;
 
     public function __construct(Database $db)
     {
         $this->db = $db;
+    }
+
+    /**
+     * Get the display label for a visitor type.
+     */
+    public static function typeLabel(string $type): string
+    {
+        return self::TYPE_LABELS[$type] ?? ucwords(str_replace('_', ' ', $type));
+    }
+
+    /**
+     * Build the visitor-log URL that filters by a single visitor type.
+     *
+     * Keeps the other active filters, drops pagination (a new filter starts on
+     * page 1) and clears the type again when the already-active type is passed
+     * in, so the summary cards work as toggles.
+     *
+     * @param array<string, mixed> $filters Currently active filters.
+     */
+    public static function typeFilterUrl(string $adminPath, string $type, array $filters): string
+    {
+        $params = array_filter(
+            [
+                'type'     => (string) ($filters['type'] ?? '') === $type ? '' : $type,
+                'bot_name' => (string) ($filters['bot_name'] ?? ''),
+                'ip'       => (string) ($filters['ip'] ?? ''),
+            ],
+            static fn (string $value): bool => $value !== ''
+        );
+
+        return $adminPath . '/visitors' . ($params === [] ? '' : '?' . http_build_query($params));
     }
 
     /**
@@ -64,13 +109,7 @@ final class VisitorLogger
             [$hours]
         );
 
-        $result = [
-            'good_bot' => 0,
-            'ai_agent' => 0,
-            'bad_bot'  => 0,
-            'hacker'   => 0,
-            'human'    => 0,
-        ];
+        $result = array_fill_keys(array_keys(self::TYPE_LABELS), 0);
 
         foreach ($stmt->fetchAll() as $row) {
             $result[$row['visitor_type']] = (int) $row['cnt'];
