@@ -183,6 +183,13 @@ function commandProcessQueue(Database $db, Config $config): void
         $result['skipped']
     );
 
+    if (($result['whitelisted'] ?? 0) > 0) {
+        echo sprintf(
+            "Whitelisted locally: %d IP(s) the API reported as whitelisted" . PHP_EOL,
+            $result['whitelisted']
+        );
+    }
+
     if (!empty($result['errors'])) {
         echo "\nErrors:\n";
         foreach ($result['errors'] as $error) {
@@ -209,6 +216,12 @@ function commandProcessQueue(Database $db, Config $config): void
     $visitorsCleaned = $visitorLogger->cleanup($retentionDays);
     if ($visitorsCleaned > 0) {
         echo sprintf("Cleanup: %d visitor entries older than %d days removed.\n", $visitorsCleaned, $retentionDays);
+    }
+
+    // Drop whitelist entries mirrored from the API whose expiry has passed
+    $expiredWhitelist = (new Whitelist($db))->purgeExpired();
+    if ($expiredWhitelist > 0) {
+        echo sprintf("Cleanup: %d expired whitelist entries removed.\n", $expiredWhitelist);
     }
 
     // Auto-rotate log files if exceeding 2 MB
@@ -269,15 +282,19 @@ function commandWhitelistList(Database $db): void
     }
 
     echo "\n=== Whitelist ===\n\n";
-    echo sprintf("  %-18s %-8s %-20s %s\n", 'IP Address', 'Active', 'Added', 'Description');
-    echo "  " . str_repeat('-', 70) . "\n";
+    echo sprintf("  %-18s %-8s %-20s %-22s %s\n", 'IP Address', 'Active', 'Added', 'Expires', 'Description');
+    echo "  " . str_repeat('-', 95) . "\n";
 
     foreach ($entries as $entry) {
+        $expiresAt = (string) ($entry['expires_at'] ?? '');
+        $isExpired = $expiresAt !== '' && strtotime($expiresAt) <= time();
+
         echo sprintf(
-            "  %-18s %-8s %-20s %s\n",
+            "  %-18s %-8s %-20s %-22s %s\n",
             $entry['ip_address'],
             $entry['is_active'] ? 'Yes' : 'No',
             $entry['added_date'],
+            $expiresAt === '' ? 'never' : $expiresAt . ($isExpired ? ' (expired)' : ''),
             $entry['description'] ?? ''
         );
     }
@@ -380,7 +397,7 @@ function rotateLogFile(string $filePath, int $maxBytes = 2097152, int $keepLines
 /**
  * Save cron run status to a JSON file for the admin dashboard.
  *
- * @param array{sent: int, failed: int, skipped: int, errors: string[]} $result
+ * @param array{sent: int, failed: int, skipped: int, whitelisted?: int, errors: string[]} $result
  */
 function saveCronStatus(Config $config, array $result, int $remaining, int $cleaned = 0): void
 {
@@ -403,10 +420,11 @@ function saveCronStatus(Config $config, array $result, int $remaining, int $clea
     $existing['last_run'] = date('Y-m-d H:i:s');
     $existing['queue_mode'] = 'cron';
     $existing['last_result'] = [
-        'sent'      => $result['sent'],
-        'failed'    => $result['failed'],
-        'skipped'   => $result['skipped'],
-        'remaining' => $remaining,
+        'sent'        => $result['sent'],
+        'failed'      => $result['failed'],
+        'skipped'     => $result['skipped'],
+        'whitelisted' => $result['whitelisted'] ?? 0,
+        'remaining'   => $remaining,
         'cleaned'   => $cleaned,
         'had_errors' => !empty($result['errors']),
     ];

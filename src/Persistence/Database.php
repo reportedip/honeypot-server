@@ -91,9 +91,17 @@ final class Database
                 ip_address TEXT NOT NULL UNIQUE,
                 description TEXT,
                 added_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                is_active INTEGER DEFAULT 1
+                is_active INTEGER DEFAULT 1,
+                expires_at DATETIME
             )
         ');
+
+        // expires_at: NULL means a permanent (manually added) entry. Entries
+        // mirrored from the API's own whitelist carry an expiry so an IP that
+        // loses its upstream whitelisting is reported again afterwards.
+        $this->ensureColumns('honeypot_whitelist', [
+            'expires_at' => 'DATETIME',
+        ]);
 
         $pdo->exec('
             CREATE TABLE IF NOT EXISTS honeypot_content (

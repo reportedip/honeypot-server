@@ -429,15 +429,28 @@ ob_start();
         <button type="submit" class="rip-button rip-button--primary">Add</button>
     </form>
     <table class="rip-table">
-        <thead><tr><th>IP Address</th><th>Description</th><th>Added</th><th>Active</th><th>Action</th></tr></thead>
+        <thead><tr><th>IP Address</th><th>Description</th><th>Added</th><th>Expires</th><th>Active</th><th>Action</th></tr></thead>
         <tbody>
         <?php if (!empty($whitelist)): ?>
             <?php foreach ($whitelist as $entry): ?>
+                <?php
+                $expiresAt = (string) ($entry['expires_at'] ?? '');
+                $isExpired = $expiresAt !== '' && strtotime($expiresAt) <= time();
+                ?>
                 <tr>
                     <td style="font-family:var(--rip-font-mono);"><?= htmlspecialchars($entry['ip_address'], ENT_QUOTES, 'UTF-8') ?></td>
                     <td><?= htmlspecialchars($entry['description'] ?? '', ENT_QUOTES, 'UTF-8') ?></td>
                     <td style="white-space:nowrap;"><?= htmlspecialchars($entry['added_date'] ?? '', ENT_QUOTES, 'UTF-8') ?></td>
-                    <td><span class="rip-badge <?= $entry['is_active'] ? 'rip-badge--sent' : 'rip-badge--pending' ?>"><?= $entry['is_active'] ? 'Yes' : 'No' ?></span></td>
+                    <td style="white-space:nowrap;">
+                        <?php if ($expiresAt === ''): ?>
+                            <span style="color:var(--rip-gray-500);">never</span>
+                        <?php else: ?>
+                            <span class="rip-badge <?= $isExpired ? 'rip-badge--pending' : 'rip-badge--method' ?>" title="Mirrored from the reportedip.com whitelist">
+                                <?= htmlspecialchars($expiresAt, ENT_QUOTES, 'UTF-8') ?><?= $isExpired ? ' (expired)' : '' ?>
+                            </span>
+                        <?php endif; ?>
+                    </td>
+                    <td><span class="rip-badge <?= $entry['is_active'] && !$isExpired ? 'rip-badge--sent' : 'rip-badge--pending' ?>"><?= $entry['is_active'] && !$isExpired ? 'Yes' : 'No' ?></span></td>
                     <td>
                         <?php if ($entry['is_active']): ?>
                         <form method="post" action="<?= $base ?>/whitelist" style="display:inline;">
@@ -451,7 +464,7 @@ ob_start();
                 </tr>
             <?php endforeach; ?>
         <?php else: ?>
-            <tr><td colspan="5" class="rip-empty-state__text" style="text-align:center; padding:20px;">Whitelist is empty.</td></tr>
+            <tr><td colspan="6" class="rip-empty-state__text" style="text-align:center; padding:20px;">Whitelist is empty.</td></tr>
         <?php endif; ?>
         </tbody>
     </table>

@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.4.0] - 2026-09-15
+
+### Added
+- **Whitelist mirroring from the API** (#6) — when the API rejects a report because the IP is on its own whitelist (HTTP 400, `ip_whitelisted` — verified search-engine crawlers and the like), the honeypot now copies that verdict into the local whitelist for 7 days, described as `Auto: <category>: <reason> (reportedip.com)`. Those requests are no longer detected, queued or sent at all, instead of producing a rejected report on every hit. `honeypot_whitelist` gained an `expires_at` column (added in place on existing installations); entries added by hand stay permanent and mirroring never time-limits them. Expired entries are dropped by the regular cleanup in both queue modes, and `whitelist-list` plus the admin panel show the expiry.
+- **Clickable summary cards in the visitor log** (#5) — the five counters above the log now filter it by visitor type. They keep the bot-name and IP filters that are already active, reset pagination, mark the active card, and clear the filter again when it is clicked a second time. The cards also state that their counts cover the last 24 hours, while the log below covers the full retention period.
+
+### Fixed
+- **"Wordpress" misspelled across the admin panel** (#2) — the CMS profile identifier is lowercase and every label ran it through `ucfirst()`, rendering "Wordpress". Labels now resolve through `CmsProfile::displayName()`, which maps identifiers to their official names (WordPress, Drupal, Joomla). Affects the dashboard system info and empty state, the content list and generator headers, and the CMS name handed to the content-generation prompt.
+- **Visitor-type labels** — derived from the identifier, they rendered as "Ai agent" in the filter dropdown and fully lowercase on the cards. Cards, dropdown and table badges now share one label list (`VisitorLogger::TYPE_LABELS`).
+
 ## [1.3.12] - 2026-09-11
 
 ### Fixed

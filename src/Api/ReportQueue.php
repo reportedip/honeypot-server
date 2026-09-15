@@ -6,6 +6,7 @@ namespace ReportedIp\Honeypot\Api;
 
 use ReportedIp\Honeypot\Core\Config;
 use ReportedIp\Honeypot\Persistence\Database;
+use ReportedIp\Honeypot\Persistence\Whitelist;
 
 /**
  * Report queue processor.
@@ -15,21 +16,30 @@ use ReportedIp\Honeypot\Persistence\Database;
  */
 final class ReportQueue
 {
+    /**
+     * Days an IP stays on the local whitelist after the API rejected a report
+     * for it as whitelisted. Long enough to stop the pointless retries, short
+     * enough that an IP losing its upstream whitelisting is picked up again.
+     */
+    private const UPSTREAM_WHITELIST_TTL_DAYS = 7;
+
     private Database $db;
     private ReportClient $client;
     private Config $config;
+    private Whitelist $whitelist;
 
     public function __construct(Database $db, ReportClient $client, Config $config)
     {
         $this->db = $db;
         $this->client = $client;
         $this->config = $config;
+        $this->whitelist = new Whitelist($db);
     }
 
     /**
      * Process the report queue.
      *
-     * @return array{sent: int, failed: int, skipped: int, errors: string[]}
+     * @return array{sent: int, failed: int, skipped: int, whitelisted: int, errors: string[]}
      */
     public function process(?int $batchSize = null): array
     {
@@ -41,7 +51,7 @@ final class ReportQueue
         );
         $entries = $stmt->fetchAll();
 
-        $result = ['sent' => 0, 'failed' => 0, 'skipped' => 0, 'errors' => []];
+        $result = ['sent' => 0, 'failed' => 0, 'skipped' => 0, 'whitelisted' => 0, 'errors' => []];
 
         foreach ($entries as $entry) {
             // Skip entries with empty categories
@@ -79,11 +89,20 @@ final class ReportQueue
                 $this->markFailure((int) $entry['id'], $error);
 
                 if ($this->client->wasPermanentlyRejected()) {
-                    // 4xx (z. B. whitelisted IP): Retry kann nie gelingen —
-                    // aus der Queue nehmen, sonst blockiert der Eintrag dauerhaft
-                    // den Batch (ORDER BY timestamp ASC).
+                    // 4xx (e.g. whitelisted IP): a retry can never succeed —
+                    // drop it from the queue, otherwise the entry blocks the
+                    // batch forever (ORDER BY timestamp ASC).
                     $this->markRejected((int) $entry['id']);
                     $result['skipped']++;
+
+                    // The API rejected this IP as whitelisted (verified crawlers
+                    // and the like). Mirror that verdict locally for a while so
+                    // the honeypot stops detecting, queueing and sending reports
+                    // for an IP the API will keep refusing.
+                    if ($this->client->wasWhitelistedUpstream()
+                        && $this->mirrorUpstreamWhitelist((string) $entry['ip'])) {
+                        $result['whitelisted']++;
+                    }
                 } else {
                     $result['failed']++;
                 }
@@ -106,6 +125,29 @@ final class ReportQueue
         return (int) $this->db->query(
             'SELECT COUNT(*) FROM honeypot_logs WHERE sent = 0'
         )->fetchColumn();
+    }
+
+    /**
+     * Copy the API's whitelist verdict into the local whitelist.
+     *
+     * Only exact IPs are mirrored — the API reports the verdict for the single
+     * address that was submitted, not for the range it may come from.
+     *
+     * @return bool True when the IP was written to the whitelist.
+     */
+    private function mirrorUpstreamWhitelist(string $ip): bool
+    {
+        if (filter_var($ip, FILTER_VALIDATE_IP) === false) {
+            return false;
+        }
+
+        $this->whitelist->add(
+            $ip,
+            sprintf('Auto: %s (reportedip.com)', $this->client->getWhitelistReason()),
+            self::UPSTREAM_WHITELIST_TTL_DAYS
+        );
+
+        return true;
     }
 
     /**
