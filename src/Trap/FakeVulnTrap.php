@@ -31,6 +31,14 @@ class FakeVulnTrap implements TrapInterface
 
         $path = $request->getPath();
 
+        // A second "?" means a crawler appended a sort link of the fake
+        // directory listing to the URL it had (?C=N;O=D?C=N;O=D...). Serving
+        // the listing again feeds that loop forever: one client sent 200,000
+        // such requests in four hours. A 404 ends it after one step.
+        if (substr_count($request->getUri(), '?') > 1) {
+            return (new NotFoundTrap())->handle($request, $response, $profile);
+        }
+
         return match ($profile->getName()) {
             'wordpress' => $this->handleWordPress($path, $request, $response, $profile),
             'drupal'    => $this->handleDrupal($path, $request, $response, $profile),

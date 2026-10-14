@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.4.2] - 2026-10-14
+
+### Fixed
+- **A crawler can no longer loop forever on the fake directory listing.** The listing under `/wp-content/uploads/` carries Apache sort links such as `?C=N;O=D`. A broken crawler appended each link to the URL it already had (`/wp-content/uploads/?C=N;O=D?C=N;O=D...`), got the listing again and followed it again: one client sent about 200,000 requests in four hours and filled the access log with 75 MB in a day. A request whose URI carries a second `?` is now answered with the regular 404 page, which ends the loop after one step.
+
 ## [1.4.1] - 2026-09-15
 
 ### Fixed
